@@ -25,7 +25,6 @@ TRAIN_DATASET_PATH = str(Path(__file__).resolve().parent.parent / "data" / "data
 TEST_DATASET_PATH = str(Path(__file__).resolve().parent.parent / "data" / "dataset" / "kit_test_motion_dict.pkl")
 KIT_PATH = str(Path(__file__).resolve().parent.parent / "data" / "KIT")
 SKELETON_PATH = str(Path(__file__).resolve().parent.parent / "xml" / "smpl_humanoid.xml")
-AMASS_PATH = str(Path(__file__).resolve().parent.parent.parent / "data" / "KIT")
 
 if __name__ == "__main__":
     
@@ -51,7 +50,7 @@ if __name__ == "__main__":
         "model": "smpl",
     }
 
-    all_pkls = glob.glob(f"{AMASS_PATH}/**/*.npz", recursive=True)
+    all_pkls = glob.glob(f"{KIT_PATH}/**/*.npz", recursive=True)
     amass_full_motion_dict = {}
 
     with open(TRAIN_KEYS_PATH, "r") as f:
