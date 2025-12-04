@@ -1,0 +1,36 @@
+# Workstation thread count
+num_threads: 1
+
+# Policy mode
+control_mode: "PD"
+
+# Train-test flags
+im_eval: True
+test: True
+
+# Rendering flags
+headless: True
+fast_forward: True
+
+# Motion configs
+motion_id: 0
+num_motions: 565
+random_start: False
+
+# Motion selection flags
+random_sample: False
+
+# Policy Observations
+# proprioceptive_inputs: ["root_height", "root_tilt", "local_body_pos", "local_body_rot", "local_body_vel", "local_body_ang_vel", "muscle_len", "muscle_vel", "muscle_force", "feet_contacts"]
+proprioceptive_inputs: ["root_height", "root_tilt", "local_body_pos", "local_body_rot", "local_body_vel", "local_body_ang_vel", "feet_contacts"]
+task_inputs: ["diff_local_body_pos", "diff_local_vel", "local_ref_body_pos"]
+
+# File paths
+xml_path: "${project_root}/xml/myohuman.xml"
+motion_file: "${project_root}/data/dataset/kit_test_motion_dict.pkl"
+smpl_data_dir: "${project_root}/data/smpl"
+initial_pose_file: "${project_root}/data/initial_pose/initial_pose_test.pkl"
+
+# Extra analysis flags
+recording_biomechanics: False
+deactivate_muscles: False

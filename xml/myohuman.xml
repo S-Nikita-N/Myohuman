@@ -1,0 +1,20 @@
+<?xml version="1.0" ?>
+<mujoco model="MyoSuite's MyoHuman Model">
+
+    <include file="scene/myosuite_scene_noPedestal.xml"/>
+    <include file="assets/myotorso_assets.xml"/>
+    <include file="assets/myohead_assets.xml"/>
+    <include file="assets/myolegs_assets.xml"/>
+    <include file="assets/myoarm_assets.xml"/>
+    
+    <compiler angle="radian" meshdir=".." texturedir=".."/>
+
+    <worldbody>
+        <body name="root" pos="0 0 1">
+            <include file="assets/myotorso_chain.xml"/>
+            <include file="assets/myolegs_chain.xml"/>
+            <freejoint name = 'root'/>
+        </body>
+    </worldbody>
+
+</mujoco>

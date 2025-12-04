@@ -1,0 +1,146 @@
+import os
+import sys
+import glob
+import torch
+import joblib
+import numpy as np
+
+from tqdm import tqdm
+from pathlib import Path
+from scipy.spatial.transform import Rotation as sRot
+
+from myohuman.poselib.poselib.skeleton.skeleton3d import SkeletonTree, SkeletonState
+from myohuman.utils.smpl_skeleton.smpl_joint_names import SMPL_MUJOCO_NAMES, SMPL_BONE_ORDER_NAMES
+
+sys.path.append(os.getcwd())
+np.random.seed(0)
+torch.manual_seed(0)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+torch.use_deterministic_algorithms(True)
+
+TRAIN_KEYS_PATH = str(Path(__file__).resolve().parent.parent / "data" / "dataset" / "kit_train_keys.txt")
+TEST_KEYS_PATH = str(Path(__file__).resolve().parent.parent / "data" / "dataset" / "kit_test_keys.txt")
+TRAIN_DATASET_PATH = str(Path(__file__).resolve().parent.parent / "data" / "dataset" / "kit_train_motion_dict.pkl")
+TEST_DATASET_PATH = str(Path(__file__).resolve().parent.parent / "data" / "dataset" / "kit_test_motion_dict.pkl")
+KIT_PATH = str(Path(__file__).resolve().parent.parent / "data" / "KIT")
+SKELETON_PATH = str(Path(__file__).resolve().parent.parent / "xml" / "smpl_humanoid.xml")
+AMASS_PATH = str(Path(__file__).resolve().parent.parent.parent / "data" / "KIT")
+
+if __name__ == "__main__":
+    
+    upright_start = True
+    robot_cfg = {
+        "mesh": False,
+        "rel_joint_lm": True,
+        "upright_start": upright_start,
+        "remove_toe": False,
+        "real_weight": True,
+        "real_weight_porpotion_capsules": True,
+        "real_weight_porpotion_boxes": True, 
+        "replace_feet": True,
+        "masterfoot": False,
+        "big_ankle": True,
+        "freeze_hand": False, 
+        "box_body": False,
+        "master_range": 50,
+        "body_params": {},
+        "joint_params": {},
+        "geom_params": {},
+        "actuator_params": {},
+        "model": "smpl",
+    }
+
+    all_pkls = glob.glob(f"{AMASS_PATH}/**/*.npz", recursive=True)
+    amass_full_motion_dict = {}
+
+    with open(TRAIN_KEYS_PATH, "r") as f:
+        train_keys = f.readlines()
+    train_keys = [key.strip() for key in train_keys]
+
+    with open(TEST_KEYS_PATH, "r") as f:
+        test_keys = f.readlines()
+    test_keys = [key.strip() for key in test_keys]
+
+    length_acc = []
+    for data_path in tqdm(all_pkls):
+        bound = 0
+        splits = data_path.split("/")[-2:]
+        key_name_dump = "0-KIT_" + "_".join(splits).replace(".npz", "")
+        
+        if key_name_dump not in train_keys and key_name_dump not in test_keys:
+            continue
+            
+        entry_data = dict(np.load(open(data_path, "rb"), allow_pickle=True))
+        
+        if 'mocap_framerate' not in entry_data:
+            print(key_name_dump)
+            continue
+        framerate = entry_data['mocap_framerate']
+        
+        skip = int(framerate / 30)
+        root_trans = entry_data['trans'][::skip, :]
+        pose_aa = np.concatenate([entry_data['poses'][::skip, :66], np.zeros((root_trans.shape[0], 6))], axis=-1)
+        betas = entry_data['betas']
+        gender = entry_data['gender']
+        N = pose_aa.shape[0]
+        
+        if bound == 0:
+            bound = N
+            
+        root_trans = root_trans[:bound]
+        pose_aa = pose_aa[:bound]
+        N = pose_aa.shape[0]
+        if N < 10:
+            print(key_name_dump)
+            continue
+    
+        smpl_2_mujoco = [SMPL_BONE_ORDER_NAMES.index(q) for q in SMPL_MUJOCO_NAMES if q in SMPL_BONE_ORDER_NAMES]
+        pose_aa_mj = pose_aa.reshape(N, 24, 3)[:, smpl_2_mujoco]
+        pose_quat = sRot.from_rotvec(pose_aa_mj.reshape(-1, 3)).as_quat().reshape(N, 24, 4)
+
+        beta = np.zeros((16))
+        gender_number, beta[:], gender = [0], 0, "neutral"
+
+        skeleton_tree = SkeletonTree.from_mjcf(SKELETON_PATH)
+        root_trans_offset = torch.from_numpy(root_trans) + skeleton_tree.local_translation[0]
+
+        new_sk_state = SkeletonState.from_rotation_and_root_translation(
+            skeleton_tree,  # This is the wrong skeleton tree (location wise) here, but it's fine since we only use the parent relationship here. 
+            torch.from_numpy(pose_quat),
+            root_trans_offset,
+            is_local=True
+        )
+        
+        if robot_cfg['upright_start']:
+            pose_quat_global = (sRot.from_quat(new_sk_state.global_rotation.reshape(-1, 4).numpy()) * sRot.from_quat([0.5, 0.5, 0.5, 0.5]).inv()).as_quat().reshape(N, -1, 4)  # should fix pose_quat as well here...
+
+            new_sk_state = SkeletonState.from_rotation_and_root_translation(skeleton_tree, torch.from_numpy(pose_quat_global), root_trans_offset, is_local=False)
+            pose_quat = new_sk_state.local_rotation.numpy()
+
+        pose_quat_global = new_sk_state.global_rotation.numpy()
+        pose_quat = new_sk_state.local_rotation.numpy()
+        fps = 30
+
+        new_motion_out = {}
+        new_motion_out['pose_quat_global'] = pose_quat_global
+        new_motion_out['pose_quat'] = pose_quat
+        new_motion_out['trans_orig'] = root_trans
+        new_motion_out['root_trans_offset'] = root_trans_offset
+        new_motion_out['beta'] = beta
+        new_motion_out['gender'] = gender
+        new_motion_out['pose_aa'] = pose_aa
+        new_motion_out['fps'] = fps
+
+        amass_full_motion_dict[key_name_dump] = new_motion_out
+        
+    kit_train_motion_dict = {
+        key: amass_full_motion_dict[key] for key in train_keys if key in amass_full_motion_dict
+    }
+
+    kit_test_motion_dict = {
+        key: amass_full_motion_dict[key] for key in test_keys if key in amass_full_motion_dict
+    }
+
+    joblib.dump(kit_train_motion_dict, TRAIN_DATASET_PATH)
+    joblib.dump(kit_test_motion_dict, TEST_DATASET_PATH)

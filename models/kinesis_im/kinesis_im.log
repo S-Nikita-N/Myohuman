@@ -1,0 +1,15 @@
+[2025-12-03 22:11:30,777][kinesis.env.myolegs_im][WARNING] - !!! Initial pose data not found !!!
+[2025-12-03 22:12:34,689][kinesis.env.myolegs_im][WARNING] - !!! Initial pose data not found !!!
+[2025-12-03 22:12:44,196][kinesis.env.myolegs_im][WARNING] - !!! Initial pose data not found !!!
+[2025-12-04 21:24:04,979][root][INFO] - Saved checkpoint with 100 motions to /Users/nikita/Projects/diploma/fullbody/scripts/initial_pose_checkpoint.pkl
+[2025-12-04 21:38:27,519][root][INFO] - Saved checkpoint with 200 motions to /Users/nikita/Projects/diploma/fullbody/scripts/initial_pose_checkpoint.pkl
+[2025-12-04 21:55:25,277][root][INFO] - Saved checkpoint with 300 motions to /Users/nikita/Projects/diploma/fullbody/scripts/initial_pose_checkpoint.pkl
+[2025-12-04 22:07:10,439][root][INFO] - Saved checkpoint with 400 motions to /Users/nikita/Projects/diploma/fullbody/scripts/initial_pose_checkpoint.pkl
+[2025-12-04 22:15:56,414][root][INFO] - Loaded checkpoint with 400 motions from /Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint.pkl
+[2025-12-04 22:35:26,400][root][INFO] - Saved checkpoint with 500 motions to /Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint.pkl
+[2025-12-04 22:50:27,961][root][INFO] - Saved checkpoint with 600 motions to /Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint.pkl
+[2025-12-04 23:04:24,688][root][INFO] - Saved checkpoint with 700 motions to /Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint.pkl
+[2025-12-04 23:14:48,940][root][INFO] - Saved checkpoint with 800 motions to /Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint.pkl
+[2025-12-04 23:24:21,589][root][INFO] - Saved checkpoint with 900 motions to /Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint.pkl
+[2025-12-04 23:34:59,050][root][INFO] - Saved checkpoint with 1000 motions to /Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint.pkl
+[2025-12-05 00:04:54,164][root][INFO] - Saved checkpoint with 1100 motions to /Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint.pkl

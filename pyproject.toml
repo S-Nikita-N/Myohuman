@@ -1,0 +1,46 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "myohuman"
+version = "0.1.0"
+description = "Your package description"
+authors = ["Me <me@email.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [
+    { include = "myohuman", from = "src" }
+]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.15"
+wandb = "^0.22.3"
+sk-video = "1.1.10"
+gymnasium = "0.29.1"
+gym = "0.26.2"
+gym-notices = "0.0.8"
+hydra-core = "^1.3.2"
+mujoco = "3.3.6"
+easydict = "1.11"
+h5py = "3.10.0"
+importlib-resources = "6.4.5"
+ipdb = "0.13.13"
+joblib = "^1.5.2"
+matplotlib = "^3.10.7"
+numpy = "^2.3.4"
+numpy-stl = "^3.2.0"
+omegaconf = "2.3.0"
+pandas = "^2.3.3"
+pyopengl = "3.1.0"
+pytest = "^8.4.2"
+scikit-learn = "^1.7.2"
+scipy = "^1.16.3"
+termcolor = "^3.2.0"
+torch = "^2.9.0"
+tqdm = "^4.67.1"
+ipykernel = "^7.1.0"
+smplx = {git = "https://github.com/ZhengyiLuo/smplx.git", rev = "a5b8e4ac14f79f3f33fd2cf2a16e6f507146b813"}
+lxml = "^6.0.2"
+httpx = "^0.28.1"
+openai = "^2.8.1"
