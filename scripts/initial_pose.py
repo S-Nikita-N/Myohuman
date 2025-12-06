@@ -16,7 +16,7 @@ sys.path.append(os.getcwd())
 
 # CHECKPOINT_PATH = Path("/Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint.pkl")
 CHECKPOINT_PATH = Path("/Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint_eval.pkl")
-CHECKPOINT_EVERY = 100  # сохраняем прогресс каждые N motions
+CHECKPOINT_EVERY = 500  # сохраняем прогресс каждые N motions
 
 
 def _ensure_parent_dir(path: Path) -> None:
