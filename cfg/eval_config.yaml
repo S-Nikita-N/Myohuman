@@ -5,9 +5,9 @@ defaults:
   - run: eval_run
 
 notes: "Default Notes"
-project: kinesis
-exp_name: &exp_name kinesis_im
-headless: True
+project: myohuman
+exp_name: &exp_name myohuman_motion_imitation_eval
+headless: False
 seed: 0
 no_log: False
 resume_str: null
@@ -15,8 +15,8 @@ num_threads: 1
 test: False 
 project_root: ${hydra:runtime.cwd}
 output_dir: ${project_root}/models/${exp_name}
-epoch: 0
-im_eval: False
+epoch: -1
+im_eval: True
 num_primitive: 3
 num_experts: 3
 

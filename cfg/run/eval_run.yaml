@@ -9,12 +9,12 @@ im_eval: True
 test: True
 
 # Rendering flags
-headless: True
+headless: False
 fast_forward: True
 
 # Motion configs
 motion_id: 0
-num_motions: 565
+num_motions: 500
 random_start: False
 
 # Motion selection flags

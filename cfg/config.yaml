@@ -5,8 +5,8 @@ defaults:
   - run: train_run
 
 notes: "Default Notes"
-project: kinesis
-exp_name: &exp_name kinesis_im
+project: myohuman
+exp_name: &exp_name myohuman_motion_imitation
 headless: True
 seed: 0
 no_log: False

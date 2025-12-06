@@ -14,11 +14,10 @@ fast_forward: True
 
 # Motion configs
 motion_id: 0
-num_motions: 2259
+num_motions: 1964
 random_start: True
 
 # Motion selection flags
-custom_set: False
 random_sample: False
 
 # Policy Observations
