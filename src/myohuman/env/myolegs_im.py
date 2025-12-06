@@ -411,13 +411,6 @@ class MyoLegsIm(MyoLegsTask):
                 if self.motion_lib._curr_motion_ids[0] not in self.motions_to_remove:
                     self.compute_initial_pose()
 
-        # print("!!! DEBUGGING INITIAL POSE !!!")
-        # if self.viewer is not None:
-        #     self.draw_task()  # Обновляем положение красных и синих сфер
-        #     self.viewer.sync()
-        #     import time
-        #     time.sleep(10)
-
         # Set up velocity
         ref_qvel = motion_return.qvel.flatten()[:6]
         self.mj_data.qvel[:3] = ref_qvel[:3]
@@ -599,7 +592,12 @@ class MyoLegsIm(MyoLegsTask):
         motion_id = self._sampled_motion_ids[0] + self.motion_start_idx
         return motion_id
 
-    def get_state_from_motionlib_cache(self, motion_ids: np.ndarray, motion_times: np.ndarray, offset: Optional[np.ndarray] = None) -> dict:
+    def get_state_from_motionlib_cache(
+        self,
+        motion_ids: np.ndarray,
+        motion_times: np.ndarray,
+        offset: Optional[np.ndarray] = None
+    ) -> dict:
         """
         Retrieves the motion state from the motion library, with caching for efficiency.
 

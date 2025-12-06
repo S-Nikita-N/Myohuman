@@ -14,7 +14,8 @@ from myohuman.env.myolegs_im import MyoLegsIm
 
 sys.path.append(os.getcwd())
 
-CHECKPOINT_PATH = Path("/Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint.pkl")
+# CHECKPOINT_PATH = Path("/Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint.pkl")
+CHECKPOINT_PATH = Path("/Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint_eval.pkl")
 CHECKPOINT_EVERY = 100  # сохраняем прогресс каждые N motions
 
 
@@ -74,7 +75,8 @@ def process_motion(motion_step, cfg_dict):
 @hydra.main(
     version_base=None,
     config_path="/Users/nikita/Projects/diploma/fullbody/cfg",
-    config_name="config",
+    # config_name="config",
+    config_name="eval_config",
 )
 def main(cfg):
 

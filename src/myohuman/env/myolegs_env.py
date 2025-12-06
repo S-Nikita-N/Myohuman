@@ -5,7 +5,7 @@ import numpy as np
 import gymnasium as gym
 import myohuman.utils.np_transform_utils as npt_utils
 
-from typing import List, Tuple
+from typing import Tuple
 from collections import OrderedDict
 from scipy.spatial.transform import Rotation as sRot
 from myohuman.env.myolegs_base_env import BaseEnv
@@ -247,12 +247,6 @@ class MyoLegsEnv(BaseEnv):
         else:
             return False, False
 
-    def pre_physics_step(self, action):
-        """
-        Placeholder for pre-physics-step computations. In the environment class, this defaults to no operation
-        """
-        pass
-
     def physics_step(self, action: np.ndarray = None) -> None:
         """
         Executes a physics step in the simulation with the given action.
@@ -276,11 +270,6 @@ class MyoLegsEnv(BaseEnv):
                 if self.control_mode == "PD":
                     muscle_activity = target_length_to_activation(target_lengths, self.mj_data, self.mj_model)
 
-                    # MANUAL MUSCLE DEACTIVATION
-                    if self.cfg.run.deactivate_muscles:
-                        inactive_muscles = ["tibant_l", "tibant_r"]
-                        muscle_activity = self.deactivate_muscles(muscle_activity, inactive_muscles)
-
                 elif self.control_mode == "direct":
                     muscle_activity = (action + 1.0) / 2.0
 
@@ -291,23 +280,6 @@ class MyoLegsEnv(BaseEnv):
                 mujoco.mj_step(self.mj_model, self.mj_data)
                 self.curr_power_usage.append(self.compute_energy_reward(muscle_activity))
     
-    def deactivate_muscles(self, muscle_activity: np.ndarray, targetted_muscles: List[str]) -> np.ndarray:
-        """
-        Deactivates specific muscles by setting their activation values to zero.
-
-        Args:
-            muscle_activity (np.ndarray): Array of muscle activation values.
-            targetted_muscles (list): List of muscle names (str) to deactivate.
-
-        Returns:
-            np.ndarray: Updated muscle activation values with the targeted muscles deactivated.
-        """
-        muscle_names = get_actuator_names(self.mj_model)
-        indexes = [muscle_names.index(muscle) for muscle in targetted_muscles]
-        for idx in indexes:
-            muscle_activity[idx] = 0.0
-        return muscle_activity
-
     def post_physics_step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, dict]:
         """
         Processes the environment state after each physics step.
@@ -346,8 +318,7 @@ class MyoLegsEnv(BaseEnv):
         """
         self.mj_data.qpos[:] = 0
         self.mj_data.qvel[:] = 0
-        self.mj_data.qpos[2] = 0.94
-        # self.mj_data.qpos[3:7] = np.array([0.5, 0.5, 0.5, 0.5])   
+        self.mj_data.qpos[2] = 0.94   
         self.mj_data.qpos[3:7] = np.array([1, 0, 0, 0])   
         
     def forward_sim(self):
@@ -430,37 +401,11 @@ def compute_self_observations(
     return obs
 
 
-def get_actuator_names(model) -> list:
-    """
-    Retrieves the names of all actuators in the Mujoco model.
-
-    Args:
-        model: The Mujoco model containing actuator information.
-
-    Returns:
-        list: A list of actuator names as strings.
-    """
-    actuators = []
-    for i in range(model.nu):
-        if i == model.nu - 1:
-            end_p = None
-            for el in ["name_numericadr", "name_textadr", "name_tupleadr", "name_keyadr", "name_pluginadr", "name_sensoradr"]:
-                v = getattr(model, el)
-                if np.any(v):
-                    if end_p is None:
-                        end_p = v[0]
-                    else:
-                        end_p = min(end_p, v[0])
-            if end_p is None:
-                end_p = model.nnames
-        else:
-            end_p = model.name_actuatoradr[i + 1]
-        name = model.names[model.name_actuatoradr[i]:end_p].decode("utf-8").rstrip('\x00')
-        actuators.append(name)
-    return actuators
-
-
-def force_to_activation(forces, model, data):
+def force_to_activation(
+    forces,
+    model,
+    data
+):
     """
     Converts actuator forces to activation levels for each actuator in the Mujoco model.
 
@@ -487,7 +432,11 @@ def force_to_activation(forces, model, data):
     return activations
 
 
-def target_length_to_force(lengths: np.ndarray, data, model) -> list:
+def target_length_to_force(
+    lengths: np.ndarray,
+    data,
+    model
+) -> list:
     """
     Converts target muscle lengths to forces using a PD control law.
 
@@ -513,7 +462,11 @@ def target_length_to_force(lengths: np.ndarray, data, model) -> list:
     return forces
 
 
-def target_length_to_activation(lengths: np.ndarray, data, model) -> np.ndarray:
+def target_length_to_activation(
+    lengths: np.ndarray,
+    data,
+    model
+) -> np.ndarray:
     """
     Converts target lengths to activation levels via force computation.
 
@@ -530,7 +483,10 @@ def target_length_to_activation(lengths: np.ndarray, data, model) -> np.ndarray:
     return np.clip(activations, 0, 1)
 
 
-def action_to_target_length(action: np.ndarray, model) -> list:
+def action_to_target_length(
+    action: np.ndarray,
+    model
+) -> list:
     """
     Maps actions to target lengths for actuators based on their length ranges.
 

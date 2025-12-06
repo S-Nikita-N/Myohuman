@@ -69,8 +69,6 @@ class BaseEnv(gym.Env):
             truncated: A boolean indicating whether the episode is truncated, i.e. the maximum number of steps has been reached.
             info: Additional information about the step - cf post_physics_step().
         """
-        # apply actions
-        self.pre_physics_step(action)
 
         # step physics and render each frame
         self.physics_step(action)
@@ -83,9 +81,6 @@ class BaseEnv(gym.Env):
             self.render()
 
         return observation, reward, terminated, truncated, info
-    
-    def pre_physics_step(self, action):
-        raise NotImplementedError
     
     def physics_step(self, action):
         raise NotImplementedError
