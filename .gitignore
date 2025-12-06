@@ -1,6 +1,5 @@
 *.DS_Store*
 *__pycache__*
-*.pkl
 models/
 data/KIT
 data/smpl/
