@@ -1,23 +1,21 @@
-# This file contains code adapted from:
-#
-# 1. SMPLSim (https://github.com/ZhengyiLuo/SMPLSim)
-#    Copyright (c) 2024 Zhengyi Luo
-#    Licensed under the BSD 3-Clause License.
-#
-# 2. PyTorch-RL (https://github.com/Khrylx/PyTorch-RL)
-#   Copyright (c) 2020 Ye Yuan
-
 import torch.nn as nn
-import torch
+
+from myohuman.learning.mlp import MLP
 
 
 class Value(nn.Module):
-    def __init__(self, net, net_out_dim=None):
+    def __init__(
+        self,
+        input_dim,
+        hidden_dims=(128, 128),
+        activation="tanh"
+    ):
+        """
+        Simple value network: MLP feature extractor followed by linear value head.
+        """
         super().__init__()
-        self.net = net
-        if net_out_dim is None:
-            net_out_dim = net.out_dim
-        self.value_head = nn.Linear(net_out_dim, 1)
+        self.net = MLP(input_dim, hidden_dims, activation)
+        self.value_head = nn.Linear(self.net.out_dim, 1)
         self.value_head.weight.data.mul_(0.1)
         self.value_head.bias.data.mul_(0.0)
 

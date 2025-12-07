@@ -1,18 +1,15 @@
 # This file contains code adapted from:
-#
-# 1. SMPLSim (https://github.com/ZhengyiLuo/SMPLSim)
-#    Copyright (c) 2024 Zhengyi Luo
-#    Licensed under the BSD 3-Clause License.
-#
-# 2. PyTorch-RL (https://github.com/Khrylx/PyTorch-RL)
-#   Copyright (c) 2020 Ye Yuan
-
-import torch.nn as nn
 import torch
+import torch.nn as nn
 
 
 class MLP(nn.Module):
-    def __init__(self, input_dim, hidden_dims=(128, 128), activation='tanh'):
+    def __init__(
+        self,
+        input_dim,
+        hidden_dims=(128, 128),
+        activation='tanh'
+    ):
         super().__init__()
         if activation == 'tanh':
             self.activation = torch.tanh

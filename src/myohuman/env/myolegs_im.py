@@ -568,7 +568,6 @@ class MyoLegsIm(MyoLegsTask):
                     self._motion_start_times[:] = options["start_time"]
                 elif self.random_start:
                     motion_id = self.get_true_motion_id()
-                    # sample from the keys of initial_pos_dict[motion_id]
                     start_time = np.random.choice(list(self.initial_pos_data[motion_id].keys()))
                     self._motion_start_times[:] = start_time
         else:
@@ -578,7 +577,6 @@ class MyoLegsIm(MyoLegsTask):
                 self._motion_start_times[:] = options["start_time"]
             elif self.random_start:
                 motion_id = self.get_true_motion_id()
-                # sample from the keys of initial_pos_dict[motion_id]
                 start_time = np.random.choice(list(self.initial_pos_data[motion_id].keys()))
                 self._motion_start_times[:] = start_time
     
@@ -891,7 +889,6 @@ class MyoLegsIm(MyoLegsTask):
         self.motion_lib_cfg.randomize_heading = False
         self.im_eval = im_eval
         self.test = True
-
         self._temp_termination_distance = self.termination_distance
 
     def end_eval(self):
@@ -983,13 +980,6 @@ class MyoLegsIm(MyoLegsTask):
 
         if self.render_mode == "human":
             self.render()
-
-        # print("!!! END DEBUGGING INITIAL POSE !!!")
-        # if self.viewer is not None:
-        #     self.draw_task()  # Обновляем положение красных и синих сфер
-        #     self.viewer.sync()
-        #     import time
-        #     time.sleep(10)
 
         return observation, reward, terminated, truncated, info
 

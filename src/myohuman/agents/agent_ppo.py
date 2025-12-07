@@ -7,7 +7,7 @@ import numpy as np
 from typing import List, Optional, Tuple
 
 from myohuman.agents.agent import Agent
-from myohuman.learning.learning_utils import to_test, to_train, estimate_advantages
+from myohuman.learning.learning_utils import to_test, to_train, batch_to
 
 
 logger = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ class AgentPPO(Agent):
                 values = self.value_net(states)
 
         # Estimate advantages and returns
-        advantages, returns = estimate_advantages(
+        advantages, returns = self.estimate_advantages(
             rewards, masks, values, self.gamma, self.tau
         )
 
@@ -226,3 +226,32 @@ class AgentPPO(Agent):
         surr_loss = -torch.min(surr1, surr2).mean()
 
         return surr_loss
+
+    def estimate_advantages(
+        self,
+        rewards,
+        masks,
+        values,
+        gamma,
+        tau
+    ):
+        device = rewards.device
+        rewards, masks, values = batch_to(torch.device('cpu'), rewards, masks, values)
+        tensor_type = type(rewards)
+        deltas = tensor_type(rewards.size(0), 1)
+        advantages = tensor_type(rewards.size(0), 1)
+
+        prev_value = 0
+        prev_advantage = 0
+        for i in reversed(range(rewards.size(0))):
+            deltas[i] = rewards[i] + gamma * prev_value * masks[i] - values[i]
+            advantages[i] = deltas[i] + gamma * tau * prev_advantage * masks[i]
+
+            prev_value = values[i, 0]
+            prev_advantage = advantages[i, 0]
+
+        returns = values + advantages
+        advantages = (advantages - advantages.mean()) / advantages.std()
+
+        advantages, returns = batch_to(device, advantages, returns)
+        return advantages, returns

@@ -21,7 +21,6 @@ from myohuman.learning.policy_gaussian import PolicyGaussian
 from myohuman.learning.policy_lattice import PolicyLattice
 from myohuman.learning.policy_moe import PolicyMOE
 from myohuman.learning.critic import Value
-from myohuman.learning.mlp import MLP
 from myohuman.learning.learning_utils import to_device, to_cpu, get_optimizer
 
 
@@ -128,9 +127,9 @@ class AgentHumanoid(AgentPPO, ABC):
         """
         state_dim = self.env.observation_space.shape[0]
         self.value_net = Value(
-            MLP(
-                state_dim, self.cfg.learning.mlp.units, self.cfg.learning.mlp.activation
-            )
+            state_dim,
+            hidden_dims=self.cfg.learning.mlp.units,
+            activation=self.cfg.learning.mlp.activation,
         )
         to_device(self.device, self.value_net)
 

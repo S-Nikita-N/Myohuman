@@ -13,7 +13,6 @@ opt_num_epochs: 10
 # Trajectory samples per epoch
 min_batch_size: 51200
 
-
 # Maximum gradient norm for PPO
 policy_grad_clip: 25
 

@@ -260,3 +260,9 @@ class Agent:
                 np.clip(actions, self.actions_low, self.actions_high),
             )
         return actions
+
+    def rescale_actions(self, low, high, action):
+        d = (high - low) / 2.0
+        m = (high + low) / 2.0
+        scaled_action = action * d + m
+        return scaled_action

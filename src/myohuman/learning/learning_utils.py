@@ -89,33 +89,3 @@ def get_optimizer(net, lr, weight_decay, optimizer_type="adam", **kwargs):
         return torch.optim.SGD(net.parameters(), lr=lr, weight_decay=weight_decay, **kwargs)
     else:
         raise ValueError("Unknown optimizer type: {}".format(optimizer_type))
-
-
-def estimate_advantages(rewards, masks, values, gamma, tau):
-    device = rewards.device
-    rewards, masks, values = batch_to(torch.device('cpu'), rewards, masks, values)
-    tensor_type = type(rewards)
-    deltas = tensor_type(rewards.size(0), 1)
-    advantages = tensor_type(rewards.size(0), 1)
-
-    prev_value = 0
-    prev_advantage = 0
-    for i in reversed(range(rewards.size(0))):
-        deltas[i] = rewards[i] + gamma * prev_value * masks[i] - values[i]
-        advantages[i] = deltas[i] + gamma * tau * prev_advantage * masks[i]
-
-        prev_value = values[i, 0]
-        prev_advantage = advantages[i, 0]
-
-    returns = values + advantages
-    advantages = (advantages - advantages.mean()) / advantages.std()
-
-    advantages, returns = batch_to(device, advantages, returns)
-    return advantages, returns
-
-
-def rescale_actions(low, high, action):
-    d = (high - low) / 2.0
-    m = (high + low) / 2.0
-    scaled_action = action * d + m
-    return scaled_action
