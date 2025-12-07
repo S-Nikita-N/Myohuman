@@ -110,14 +110,6 @@ class AgentHumanoid(AgentPPO, ABC):
             self.policy_net = PolicyLattice(
                 self.cfg, action_dim=action_dim, latent_dim=512, state_dim=state_dim
             )
-        elif self.cfg.learning.actor_type == "moe":
-            self.policy_net = PolicyMOE(
-                self.cfg, action_dim=action_dim, state_dim=state_dim
-            )
-        elif self.cfg.learning.actor_type == "moe_finetune":
-            self.policy_net = PolicyMOE(
-                self.cfg, action_dim=action_dim, state_dim=state_dim, freeze=False
-            )
 
         to_device(self.device, self.policy_net)
 
