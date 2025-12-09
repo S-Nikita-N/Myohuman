@@ -13,7 +13,7 @@ from typing import Any, Optional, List
 from myohuman.learning.memory import Memory
 from myohuman.learning.trajbatch import TrajBatch
 from myohuman.learning.logger_rl import LoggerRL
-from myohuman.learning.learning_utils import to_test, to_cpu, rescale_actions
+from myohuman.learning.learning_utils import to_test, to_cpu
 
 
 random.seed(0)
@@ -254,7 +254,7 @@ class Agent:
             else actions.astype(self.np_dtype)
         )
         if self.clip_actions:
-            actions = rescale_actions(
+            actions = self.rescale_actions(
                 self.actions_low,
                 self.actions_high,
                 np.clip(actions, self.actions_low, self.actions_high),

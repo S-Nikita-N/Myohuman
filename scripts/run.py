@@ -5,7 +5,6 @@ import wandb
 import numpy as np
 import torch.multiprocessing as mp
 
-from typing import List
 from hydra import main as hydra_main
 from omegaconf import OmegaConf, DictConfig
 
@@ -94,3 +93,8 @@ def main(cfg: DictConfig) -> None:
 
 if __name__ == "__main__":
     main()
+
+# python scripts/run.py \
+#     run.num_threads=10 \
+#     learning.min_batch_size=5200 \
+#     exp_name=macos_train_experiment_1

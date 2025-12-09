@@ -1,13 +1,3 @@
-# Copyright (c) 2025 Mathis Group for Computational Neuroscience and AI, EPFL
-# All rights reserved.
-#
-# Licensed under the BSD 3-Clause License.
-#
-# This file contains code adapted from:
-#
-# 1. PHC_MJX (https://github.com/ZhengyiLuo/PHC_MJX)
-
-from abc import ABC, abstractmethod
 import time
 import os
 import torch
@@ -16,10 +6,11 @@ import numpy as np
 import psutil
 import logging
 
+from abc import ABC, abstractmethod
+
 from myohuman.agents.agent_ppo import AgentPPO
 from myohuman.learning.policy_gaussian import PolicyGaussian
 from myohuman.learning.policy_lattice import PolicyLattice
-from myohuman.learning.policy_moe import PolicyMOE
 from myohuman.learning.critic import Value
 from myohuman.learning.learning_utils import to_device, to_cpu, get_optimizer
 
@@ -110,6 +101,8 @@ class AgentHumanoid(AgentPPO, ABC):
             self.policy_net = PolicyLattice(
                 self.cfg, action_dim=action_dim, latent_dim=512, state_dim=state_dim
             )
+        else:
+            raise NotImplementedError
 
         to_device(self.device, self.policy_net)
 

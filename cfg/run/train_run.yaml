@@ -1,5 +1,5 @@
 # Workstation thread count
-num_threads: 128
+num_threads: 1
 
 # Policy mode
 control_mode: "PD"

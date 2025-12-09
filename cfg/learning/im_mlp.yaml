@@ -5,7 +5,7 @@ agent_name: "agent_im"
 max_epoch: 100000000
 
 # RL policy type
-actor_type: "moe"
+actor_type: "lattice"
 
 # PPO steps per epoch
 opt_num_epochs: 10
