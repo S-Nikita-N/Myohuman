@@ -11,7 +11,9 @@ actor_type: "lattice"
 opt_num_epochs: 10
 
 # Trajectory samples per epoch
-min_batch_size: 51200
+min_batch_size: 52000
+mini_batch_size: 128
+use_mini_batch: True
 
 # Maximum gradient norm for PPO
 policy_grad_clip: 25

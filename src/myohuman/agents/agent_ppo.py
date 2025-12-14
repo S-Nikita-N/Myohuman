@@ -113,7 +113,22 @@ class AgentPPO(Agent):
         # Compute log proabilities of the actions under the current policy
         with to_test(self.policy_net, self.value_net):
             with torch.no_grad():
-                fixed_log_probs = self.policy_net.get_log_prob(states, actions)
+                if self.use_mini_batch:
+                    fixed_log_probs_list = []
+                    data_size = states.shape[0]
+                    num_chunks = int(math.ceil(data_size / self.mini_batch_size))
+                    
+                    for i in range(num_chunks):
+                        ind = slice(
+                            i * self.mini_batch_size, 
+                            min((i + 1) * self.mini_batch_size, data_size)
+                        )
+                        batch_log_probs = self.policy_net.get_log_prob(states[ind], actions[ind])
+                        fixed_log_probs_list.append(batch_log_probs)
+                    
+                    fixed_log_probs = torch.cat(fixed_log_probs_list)
+                else:
+                    fixed_log_probs = self.policy_net.get_log_prob(states, actions)
 
         for _ in range(self.opt_num_epochs):
             if self.use_mini_batch:
