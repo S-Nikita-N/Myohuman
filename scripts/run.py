@@ -96,8 +96,8 @@ if __name__ == "__main__":
 
 # python scripts/run.py \
 #     run.num_threads=128 \
-#     learning.min_batch_size=10200 \
-#     learning.mini_batch_size=256 \
+#     learning.min_batch_size=20000 \
+#     learning.mini_batch_size=5200 \
 #     learning.use_mini_batch=True \
 #     run.num_motions=500 \
-#     exp_name=vastai_baseline_exp2
+#     exp_name=vastai_baseline_exp3
