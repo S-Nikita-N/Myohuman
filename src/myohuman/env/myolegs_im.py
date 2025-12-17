@@ -79,6 +79,7 @@ class MyoLegsIm(MyoLegsTask):
         
         self.setup_motionlib()
         self.load_initial_pose_data()
+        self.setup_reference_model()
         self.initialize_biomechanical_recording()
         self.initialize_evaluation_metrics()
 
@@ -141,6 +142,14 @@ class MyoLegsIm(MyoLegsTask):
         else:
             logger.warning("!!! Initial pose data not found !!!")
             self.initial_pos_data = {}
+
+    def setup_reference_model(self) -> None:
+        """
+        Creates a secondary Mujoco data buffer used to compute reference muscle
+        lengths/velocities from IK poses without touching the live simulation.
+        """
+        self.ref_data = mujoco.MjData(self.mj_model)
+        self.ref_prev_pose = {}
 
     def initialize_evaluation_metrics(self) -> None:
         """
@@ -420,6 +429,17 @@ class MyoLegsIm(MyoLegsTask):
         # Run kinematics
         mujoco.mj_kinematics(self.mj_model, self.mj_data)
 
+    def reset_reference_pose_cache(self) -> None:
+        """
+        Clears cached reference poses/velocities used for muscle imitation reward.
+        """
+        self.ref_prev_pose.clear()
+        motion_id = self.get_true_motion_id()
+        start_time = float(self._motion_start_times[0])
+        start_pose = self._lookup_reference_qpos(motion_id, start_time)
+        if start_pose is not None:
+            self.ref_prev_pose[motion_id] = (start_time, start_pose.copy())
+
     def reset_evaluation_metrics(self) -> None:
         """
         Resets evaluation metrics for motion imitation performance.
@@ -579,6 +599,7 @@ class MyoLegsIm(MyoLegsTask):
                 motion_id = self.get_true_motion_id()
                 start_time = np.random.choice(list(self.initial_pos_data[motion_id].keys()))
                 self._motion_start_times[:] = start_time
+        self.reset_reference_pose_cache()
     
     def get_true_motion_id(self) -> int:
         """
@@ -589,6 +610,25 @@ class MyoLegsIm(MyoLegsTask):
         """
         motion_id = self._sampled_motion_ids[0] + self.motion_start_idx
         return motion_id
+
+    def _lookup_reference_qpos(self, motion_id: int, motion_time: float) -> Optional[np.ndarray]:
+        """
+        Returns the IK-computed qpos for the closest cached frame of the given motion.
+        """
+        if not self.initial_pos_data or motion_id not in self.initial_pos_data:
+            return None
+
+        motion_dict = self.initial_pos_data[motion_id]
+        if not motion_dict:
+            return None
+
+        target_key = motion_time
+        if target_key in motion_dict:
+            return motion_dict[target_key]
+
+        keys = np.array(list(motion_dict.keys()), dtype=float)
+        nearest_key = keys[np.abs(keys - motion_time).argmin()]
+        return motion_dict[nearest_key]
 
     def get_state_from_motionlib_cache(
         self,
@@ -784,6 +824,56 @@ class MyoLegsIm(MyoLegsTask):
         """
         self.mpjpe.append(np.linalg.norm(body_pos - ref_pos, axis=-1).mean())
 
+    def get_reference_muscle_state(self, motion_time: float) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+        """
+        Returns reference actuator lengths/velocities for the given motion time using the IK cache.
+        """
+        motion_id = self.get_true_motion_id()
+        ref_qpos = self._lookup_reference_qpos(motion_id, motion_time)
+        if ref_qpos is None:
+            return None, None
+
+        ref_qpos = ref_qpos.astype(self.dtype, copy=False)
+        self.ref_data.qpos[: len(ref_qpos)] = ref_qpos
+        self.ref_data.qvel[:] = 0
+
+        prev_entry = self.ref_prev_pose.get(motion_id)
+        if prev_entry is not None:
+            prev_time, prev_qpos = prev_entry
+            dt = max(motion_time - prev_time, 1e-6)
+            mujoco.mj_differentiatePos(self.mj_model, self.ref_data.qvel, dt, prev_qpos, ref_qpos)
+
+        mujoco.mj_forward(self.mj_model, self.ref_data)
+        self.ref_prev_pose[motion_id] = (motion_time, ref_qpos.copy())
+
+        return (
+            self.ref_data.actuator_length.copy(),
+            self.ref_data.actuator_velocity.copy(),
+        )
+
+    def compute_muscle_imitation_reward(self, motion_time: float) -> Tuple[float, Dict[str, float]]:
+        """
+        Matches simulated muscle length/velocity to the IK reference.
+        """
+        ref_lengths, ref_velocities = self.get_reference_muscle_state(motion_time)
+        if ref_lengths is None:
+            return 0.0, {}
+
+        curr_lengths = np.nan_to_num(self.mj_data.actuator_length.copy())
+        curr_velocities = np.nan_to_num(self.mj_data.actuator_velocity.copy())
+
+        k_len = self.reward_specs.get("k_muscle_len", 10.0)
+        k_vel = self.reward_specs.get("k_muscle_vel", 1.0)
+        w_len = self.reward_specs.get("w_muscle_len", 0.0)
+        w_vel = self.reward_specs.get("w_muscle_vel", 0.0)
+
+        r_len = np.exp(-k_len * ((curr_lengths - ref_lengths) ** 2).mean())
+        r_vel = np.exp(-k_vel * ((curr_velocities - ref_velocities) ** 2).mean())
+
+        reward = w_len * r_len + w_vel * r_vel
+        reward_raw = {"r_muscle_len": r_len, "r_muscle_vel": r_vel}
+        return reward, reward_raw
+
     def compute_reward(self, action: Optional[np.ndarray] = None) -> float:
         """
         Computes the reward for the current simulation step.
@@ -807,6 +897,8 @@ class MyoLegsIm(MyoLegsTask):
             + self._motion_start_times
             + self._motion_start_times_offset
         )
+        muscle_reward, muscle_reward_raw = self.compute_muscle_imitation_reward(float(motion_times[0]))
+
         ref_dict = self.get_state_from_motionlib_cache(
             self._sampled_motion_ids, motion_times, self.global_offset
         )
@@ -835,10 +927,12 @@ class MyoLegsIm(MyoLegsTask):
         self.curr_power_usage = []
 
         reward += energy_reward * self.reward_specs["w_energy"]
+        reward += muscle_reward
 
         self.reward_info = reward_raw
         # self.reward_info["upright_reward"] = upright_reward
         self.reward_info["energy_reward"] = energy_reward
+        self.reward_info.update(muscle_reward_raw)
 
         self.record_evaluation_metrics(body_pos_subset, ref_pos_subset, body_vel_subset, ref_body_vel_subset)
 
