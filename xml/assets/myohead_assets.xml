@@ -11,9 +11,9 @@
         <texture name="tex_myohead" builtin="flat" height="762" mark="cross" markrgb="1 .9 .9" rgb1="1 1 1" rgb2="1 1 1" type="cube" width="127"/>
         <material name="mat_myohead" texture="tex_myohead" texuniform="true"/>
 
-        <mesh file="../myo_sim/meshes/hat_cervical.stl" name="hat_cervical"/>
-        <mesh file="../myo_sim/meshes/hat_jaw.stl" name="hat_jaw"/>
-        <mesh file="../myo_sim/meshes/hat_skull.stl" name="hat_skull"/>
+        <mesh file="../meshes/hat_cervical.stl" name="hat_cervical"/>
+        <mesh file="../meshes/hat_jaw.stl" name="hat_jaw"/>
+        <mesh file="../meshes/hat_skull.stl" name="hat_skull"/>
     </asset>
 
      <default>
