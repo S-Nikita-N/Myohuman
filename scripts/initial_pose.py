@@ -15,11 +15,13 @@ from myohuman.env.myolegs_im import MyoLegsIm
 sys.path.append(os.getcwd())
 
 # CHECKPOINT_PATH = Path("/Users/nikita/Projects/diploma/fullbody/data/dataset/initial_pose_checkpoint.pkl")
-CHECKPOINT_PATH = Path("/workspace/Myohuman/data/tmp/ik_train_ckpt.pkl")
+# CHECKPOINT_PATH = Path("/workspace/Myohuman/data/tmp/ik_train_ckpt.pkl")
+CHECKPOINT_PATH = Path("/Users/nikita/Projects/diploma/fullbody/data/tmp/ik_train_ckpt_copy.pkl")
 CHECKPOINT_EVERY = 500  # сохраняем прогресс каждые N выполненных motions
 
 # Путь к файлу логов (можно вынести в конфиг или оставить здесь)
-LOG_FILE_PATH = Path("/workspace/Myohuman/data/tmp/processing.log") 
+# LOG_FILE_PATH = Path("/workspace/Myohuman/data/tmp/processing.log") 
+LOG_FILE_PATH = Path("/Users/nikita/Projects/diploma/fullbody/data/tmp/processing.log") 
 
 
 def _ensure_parent_dir(path: Path) -> None:
@@ -32,7 +34,7 @@ def setup_file_logger(log_path: Path):
     formatter = logging.Formatter('%(asctime)s - %(processName)s - %(levelname)s - %(message)s')
     
     # Создаем хендлер для файла
-    file_handler = logging.FileHandler(log_path, mode='a') # 'a' - append (дописывать), 'w' - перезаписывать
+    file_handler = logging.FileHandler(log_path, mode='a')  # 'a' - append (дописывать), 'w' - перезаписывать
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.INFO)
     
@@ -78,7 +80,7 @@ def process_motion(motion_step, cfg_dict):
         )
         
         # Проверка, есть ли загруженные движения
-        if not env.motion_lib._curr_motion_ids:
+        if not len(env.motion_lib._curr_motion_ids):
             return None, None
 
         motion_id = env.motion_lib._curr_motion_ids[0]
@@ -139,7 +141,7 @@ def main(cfg):
             # as_completed возвращает результаты по мере их готовности (в любом порядке)
             for future in tqdm(as_completed(futures), total=len(remaining_ids), desc="Processing"):
                 motion_id, poses = future.result()
-                
+
                 if motion_id is not None:
                     initial_pose_dict[motion_id] = poses
                     since_last_save += 1
@@ -155,15 +157,7 @@ def main(cfg):
 
     _ensure_parent_dir(Path(cfg.run.initial_pose_file))
 
-    logging.info("Post-processing data (rounding keys)...")
-    new_data = {}
-    for motion_key in tqdm(initial_pose_dict.keys(), desc="Rounding keys"):
-        new_data[motion_key] = {}
-        for frame_key in initial_pose_dict[motion_key].keys():
-            new_key = np.round(frame_key, 1)
-            new_data[motion_key][new_key] = initial_pose_dict[motion_key][frame_key]
-
-    joblib.dump(new_data, cfg.run.initial_pose_file)
+    joblib.dump(initial_pose_dict, cfg.run.initial_pose_file)
     logging.info(f"Saved final data to {cfg.run.initial_pose_file}")
 
 
@@ -172,3 +166,6 @@ if __name__ == "__main__":
 # OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
 # python scripts/initial_pose.py \
 #     run.initial_pose_file="/workspace/Myohuman/data/tmp/ik_train.pkl"
+# OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+# poetry run python scripts/initial_pose.py \
+#     run.initial_pose_file="/Users/nikita/Projects/diploma/fullbody/data/tmp/ik_train_copy.pkl"

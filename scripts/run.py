@@ -101,3 +101,19 @@ if __name__ == "__main__":
 #     learning.use_mini_batch=True \
 #     run.num_motions=500 \
 #     exp_name=vastai_baseline_exp3
+
+# poetry run mjpython scripts/run.py \
+#     run.num_threads=1 \
+#     run.headless=False
+#     learning.min_batch_size=500 \
+#     run.num_motions=500 \
+#     exp_name=macos_muscle_valid
+
+
+# python scripts/run.py \
+#     run.num_threads=10 \
+#     learning.min_batch_size=5200 \
+#     learning.mini_batch_size=5200 \
+#     learning.use_mini_batch=True \
+#     run.num_motions=500 \
+#     exp_name=macos_ik_train_exp1

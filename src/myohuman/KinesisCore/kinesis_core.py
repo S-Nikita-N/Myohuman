@@ -294,6 +294,12 @@ class KinesisCore:
             motion_times,
             offset=None
     ):
+        if not isinstance(motion_ids, np.ndarray):
+            motion_ids = np.array([motion_ids])
+
+        if not isinstance(motion_times, np.ndarray):
+            motion_times = np.array(motion_times)
+
         motion_len = self._motion_lengths[motion_ids]
         num_frames = self._motion_num_frames[motion_ids]
         dt = self._motion_dt[motion_ids]
@@ -337,6 +343,10 @@ class KinesisCore:
         )
 
     def get_motion_length(self, motion_ids=None):
+
+        if not isinstance(motion_ids, np.ndarray):
+            motion_ids = np.array([motion_ids])
+
         if motion_ids is None:
             return self._motion_lengths
         else:

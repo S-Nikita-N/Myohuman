@@ -44,27 +44,6 @@ class PolicyLattice(Policy):
         self.lattice_dist = MultivariateNormal(action_mean, sigma_mat)
         return self.lattice_dist
 
-    # def forward(self, x):
-    #     B = x.size(0)
-    #     x = self.norm(x)
-    #     x = self.net(x)
-    #     action_mean = self.action_mean(x)  # [B, A]
-
-    #     std = torch.exp(self.log_std)
-    #     action_std = std[:, :self.action_dim]
-    #     latent_std = std[:, self.action_dim:]
-        
-    #     action_var = action_std.pow(2).flatten()   # [A]
-    #     latent_var = latent_std.pow(2).flatten()   # [L]
-    #     W = self.action_mean.weight                # [A, H]
-
-    #     latent_cov = W @ torch.diag(latent_var) @ W.T  # [A, A]
-    #     Sigma = latent_cov + torch.diag(action_var)    # [A, A]
-    #     Sigma_batch = Sigma.expand(B, -1, -1)          # [B, A, A]
-
-    #     dist = MultivariateNormal(action_mean, Sigma_batch)
-    #     return dist
-
     def select_action(self, x, mean_action=False):
         dist = self.forward(x) 
         action = dist.loc if mean_action else dist.rsample()

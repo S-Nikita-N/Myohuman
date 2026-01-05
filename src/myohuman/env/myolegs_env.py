@@ -181,53 +181,86 @@ class MyoLegsEnv(BaseEnv):
 
         return np.concatenate([v.ravel() for v in myolegs_obs.values()], axis=0, dtype=self.dtype)
     
-    def get_body_xpos(self):
+    def get_body_xpos(self, data=None):
         """
         Returns the body positions of the agent in X, Y, Z coordinates.
         """
-        return self.mj_data.xpos.copy()[self.robot_idx_start: self.robot_idx_end]
+        if data is None:
+            return self.mj_data.xpos.copy()[self.robot_idx_start: self.robot_idx_end]
+        else:
+            return data.xpos.copy()[self.robot_idx_start: self.robot_idx_end]
 
-    def get_body_xquat(self):
+    def get_body_xquat(self, data=None):
         """
         Returns the body rotations of the agent in quaternion
         """
-        return self.mj_data.xquat.copy()[self.robot_idx_start: self.robot_idx_end]
-    
-    def get_body_linear_vel(self):
+        if data is None:
+            return self.mj_data.xquat.copy()[self.robot_idx_start: self.robot_idx_end]
+        else:
+            return data.xquat.copy()[self.robot_idx_start: self.robot_idx_end]
+        
+    def get_body_linear_vel(self, data=None):
         """
         Returns the linear velocity of the agent's body parts.
         """
-        return self.mj_data.sensordata[:self.num_vel_limit].reshape(self.num_bodies, 3).copy()
+        if data is None:
+            return self.mj_data.sensordata[:self.num_vel_limit].reshape(self.num_bodies, 3).copy()
+        else:
+            return data.sensordata[:self.num_vel_limit].reshape(self.num_bodies, 3).copy()
     
-    def get_body_angular_vel(self):
+    def get_body_angular_vel(self, data=None):
         """
         Returns the angular velocity of the agent's body parts.
         """
-        return self.mj_data.sensordata[self.num_vel_limit:2 * self.num_vel_limit].reshape(self.num_bodies, 3).copy()
+        if data is None:
+            return self.mj_data.sensordata[self.num_vel_limit:2 * self.num_vel_limit].reshape(self.num_bodies, 3).copy()
+        else:
+            return data.sensordata[self.num_vel_limit:2 * self.num_vel_limit].reshape(self.num_bodies, 3).copy()
     
-    def get_touch(self):
+    def get_touch(self, data=None):
         """
         Returns the touch sensor readings of the agent.
         """
-        return self.mj_data.sensordata[self.num_vel_limit * 2:].copy()
+        if data is None:
+            return self.mj_data.sensordata[self.num_vel_limit * 2:].copy()
+        else:
+            return data.sensordata[self.num_vel_limit * 2:].copy()
         
-    def get_qpos(self):
+    def get_qpos(self, data=None):
         """
         Returns the joint positions of the agent.
         """
-        return self.mj_data.qpos.copy()[: self.qpos_lim]
+        if data is None:
+            return self.mj_data.qpos.copy()[: self.qpos_lim]
+        else:
+            return data.qpos.copy()[: self.qpos_lim]
 
-    def get_qvel(self):
+    def get_qvel(self, data=None):
         """
         Returns the joint velocities of the agent.
         """
-        return self.mj_data.qvel.copy()[:self.qvel_lim]
+        if data is None:
+            return self.mj_data.qvel.copy()[:self.qvel_lim]
+        else:
+            return data.qvel.copy()[:self.qvel_lim]
     
-    def get_root_pos(self):
+    def get_muscle_length(self, data=None):
+        if data is None:
+            return self.mj_data.actuator_length.copy()
+        else:
+            return data.actuator_length.copy()
+
+    def get_muscle_velocity(self, data=None):
+        if data is None:
+            return self.mj_data.actuator_velocity.copy()
+        else:
+            return data.actuator_velocity.copy()
+
+    def get_root_pos(self, data=None):
         """
         Returns the position of the agent's root.
         """
-        return self.get_body_xpos()[0].copy()
+        return self.get_body_xpos(data)[0].copy()
 
     def compute_reward(self, action):
         """
