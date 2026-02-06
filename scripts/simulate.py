@@ -36,3 +36,5 @@ if __name__ == "__main__":
             if simulate:
                 mujoco.mj_step(model, data)
                 viewer.sync()
+
+# poetry run mjpython scripts/simulate.py --simulate 1
