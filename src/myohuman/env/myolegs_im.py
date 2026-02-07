@@ -2,8 +2,6 @@ import os
 import sys
 import joblib
 import numpy as np
-import scipy
-import torch
 import mujoco
 import logging
 import mujoco.viewer
@@ -18,7 +16,6 @@ from scipy.spatial.transform import Rotation as sRot
 
 from myohuman.env.myolegs_task import MyoLegsTask
 from myohuman.utils.visual_capsule import add_visual_capsule
-from myohuman.KinesisCore.kinesis_core import KinesisCore
 
 
 path_root = Path(__file__).resolve().parents[2]
@@ -36,30 +33,12 @@ MYOLEG_TRACKED_BODIES = [
     "toes_l",    # Левые пальцы стопы
     "toes_r",    # Правые пальцы стопы
     "head",       # Голова
-    "humerus",    # Правая плечевая кость
-    "radius",     # Правое предплечье
-    "lunate",     # Правое запятье
+    "humerus_r",    # Правая плечевая кость
+    "radius_r",     # Правое предплечье
+    "lunate_r",     # Правое запятье
     'humerus_l',  # Левая плечевая кость
     'radius_l',   # Левое предплечье
     'lunate_l',   # Левое запястье
-]
-
-# Соответствующие ID из списка SMPL
-SMPL_TRACKED_IDS = [
-    0,   # Pelvis
-    2,   # L_Knee
-    6,   # R_Knee
-    3,   # L_Ankle
-    7,   # R_Ankle
-    4,   # L_Toe
-    8,   # R_Toe
-    13,  # Head
-    20,  # R_Shoulder
-    21,  # R_Elbow
-    22,  # R_Wrist
-    15,  # L_Shoulder
-    16,  # L_Elbow
-    17,  # L_Wrist
 ]
 
 
@@ -69,20 +48,20 @@ class MyoLegsIm(MyoLegsTask):
         self.initial_pose = None
         self.previous_pose = None
         self.ref_motion_cache = EasyDict()
-        self.global_offset = np.zeros([1, 3])
-        self.gender_betas = [np.zeros(17)]
 
         self.initialize_env_params(cfg)
         self.initialize_run_params(cfg)
 
         super().__init__(cfg)
-        
-        self.setup_motionlib()
-        self.load_initial_pose_data()
+
+        self.load_reference_data()
+        self.setup_reference_model()
         self.initialize_biomechanical_recording()
         self.initialize_evaluation_metrics()
 
-        self.motions_to_remove = []
+        # Heading randomization state (per-episode)
+        self._randomize_heading = not self.test
+        self._heading_rot = None  # sRot or None
 
     def initialize_env_params(self, cfg: DictConfig) -> None:
         """
@@ -103,44 +82,69 @@ class MyoLegsIm(MyoLegsTask):
     def initialize_run_params(self, cfg: DictConfig) -> None:
         """
         Initializes run-specific parameters from the configuration.
-
-        Args:
-            cfg (DictConfig): Configuration object.
-
-        Sets:
-            - Various motion-related parameters (e.g., `motion_start_idx`, `motion_file`).
-            - Evaluation and testing flags (e.g., `im_eval`, `test`).
-            - Data recording and randomization flags.
         """
         self.motion_start_idx = cfg.run.motion_id
         self.im_eval = cfg.run.im_eval
         self.test = cfg.run.test
         self.num_motion_max = cfg.run.num_motions
-        self.motion_file = cfg.run.motion_file
         self.initial_pose_file = cfg.run.initial_pose_file
-        self.smpl_data_dir = cfg.run.smpl_data_dir
         self.random_sample = cfg.run.random_sample
         self.random_start = cfg.run.random_start
         self.recording_biomechanics = cfg.run.recording_biomechanics
 
-    def load_initial_pose_data(self) -> None:
+    def load_reference_data(self) -> None:
         """
-        Loads initial pose data from a specified file.
+        Loads pre-computed IK reference data produced by ``compute_ik.py``.
 
-        Checks for the existence of the file defined by `self.initial_pose_file` 
-        and loads it using `joblib`. If the file does not exist, initializes 
-        an empty dictionary and logs a warning.
+        Expected file format (new)::
+
+            {"frames": {motion_id: {time: qpos, ...}, ...},
+             "metadata": {motion_id: {"length", "dt", "fps", "num_frames"}, ...}}
+
+        Also supports the legacy format ``{motion_id: {time: qpos, ...}}``.
 
         Sets:
-            - `self.initial_pos_data`: Loaded pose data or an empty dictionary if the file is not found.
+            - ``self.initial_pos_data``  — frame lookup  {motion_id: {time: qpos}}
+            - ``self._motion_metadata``  — per-motion metadata dict
+            - ``self._all_motion_ids``   — sorted array of all motion IDs
+            - ``self._active_motion_ids``— currently active subset (set by sample_motions)
+            - ``self._num_total_motions``— total number of motions
         """
-        if os.path.exists(self.initial_pose_file):
-            self.initial_pos_data = joblib.load(
-                self.initial_pose_file
-            )
-        else:
-            logger.warning("!!! Initial pose data not found !!!")
+        if not os.path.exists(self.initial_pose_file):
+            logger.warning("!!! Reference data file not found: %s", self.initial_pose_file)
             self.initial_pos_data = {}
+            self._motion_metadata = {}
+            self._all_motion_ids = np.array([], dtype=int)
+            self._active_motion_ids = np.array([], dtype=int)
+            self._num_total_motions = 0
+            return
+
+        raw = joblib.load(self.initial_pose_file)
+
+        # Detect format
+        if isinstance(raw, dict) and "frames" in raw and "metadata" in raw:
+            self.initial_pos_data = raw["frames"]
+            self._motion_metadata = raw["metadata"]
+        else:
+            # Legacy format (flat dict of {motion_id: {time: qpos}})
+            self.initial_pos_data = raw
+            self._motion_metadata = {}
+
+        self._all_motion_ids = np.array(sorted(self.initial_pos_data.keys()), dtype=int)
+        self._num_total_motions = len(self._all_motion_ids)
+        self._active_motion_ids = self._all_motion_ids.copy()
+
+        logger.info(
+            "Loaded reference data: %d motions from %s",
+            self._num_total_motions, self.initial_pose_file,
+        )
+
+    def setup_reference_model(self) -> None:
+        """
+        Creates a secondary Mujoco data buffer used to compute reference muscle
+        lengths/velocities from IK poses without touching the live simulation.
+        """
+        self.ref_data = mujoco.MjData(self.mj_model)
 
     def initialize_evaluation_metrics(self) -> None:
         """
@@ -224,15 +228,10 @@ class MyoLegsIm(MyoLegsTask):
         task state, using positions from the motion library and simulation.
         """
         def draw_obj(scene):
-            sim_time = (
-                (self.cur_t) * self.dt
-                + self._motion_start_times
-                + self._motion_start_times_offset
-            )
             ref_dict = self.get_state_from_motionlib_cache(
-                self._sampled_motion_ids, sim_time, self.global_offset
+                (self.cur_t) * self.dt + self._motion_start_time
             )
-            ref_pos_subset = ref_dict.xpos[..., SMPL_TRACKED_IDS, :]
+            ref_pos_subset = ref_dict.xpos[..., self.track_bodies_id, :]
 
             for i in range(len(self.track_bodies)):
                 scene.geoms[2 * i].pos = ref_pos_subset[0, i]
@@ -271,81 +270,34 @@ class MyoLegsIm(MyoLegsTask):
             self.body_names.index(j) for j in self.reset_bodies
         ]
 
-    def setup_motionlib(self) -> None:
-        """
-        Sets up the motion library for managing SMPL motions.
-
-        Configures the motion library with parameters such as data directories, motion files, 
-        SMPL type, and randomization settings. Loads motions based on the current mode 
-        (test or training), applying shape parameters and optional motion subsets.
-
-        Sets:
-            - `self.motion_lib_cfg`: Configuration dictionary for motion library setup.
-            - `self.motion_lib`: Instance of `KinesisCore` initialized with the given config.
-            - `self._sampled_motion_ids`: Array of sampled motion IDs (default: [0]).
-            - `self._motion_start_times`: Start times for the motions.
-            - `self._motion_start_times_offset`: Offset times for motion playback.
-        """
-        self.motion_lib_cfg = EasyDict(
-            {
-                "data_dir": self.smpl_data_dir,
-                "motion_file": self.motion_file,
-                "device": torch.device("cpu"),
-                "min_length": -1,
-                "max_length": -1,
-                "multi_thread": True if self.cfg.num_threads > 1 else False,
-                "smpl_type": "smpl",
-                "randomize_heading": not self.test,
-            }
-        )
-        self.motion_lib = KinesisCore(self.motion_lib_cfg)
-
-        # These are initial values that will be updated in reset
-        self._sampled_motion_ids = np.array([0])
-        self._motion_start_times = np.zeros(1)
-        self._motion_start_times_offset = np.zeros(1)
-        return
-
     def sample_motions(self) -> None:
         """
-        Samples motions in the motion library based on the current configuration.
-
-        Loads motions into the motion library `self.motion_lib` using the specified configuration, 
-        with options for random sampling, custom subsets, and shape parameters.
-
-        Notes:
-            - See `KinesisCore.load_motions` for more details on the loading process.
-            - The number of motions to load is determined by the length of the `shape_params` argument.
+        Selects the active subset of motion IDs for the current training period.
+        Called at init and periodically every ``resampling_interval`` epochs.
         """
-        self.motion_lib.load_motions(
-            self.motion_lib_cfg,
-            shape_params=self.gender_betas * min(self.num_motion_max, self.motion_lib.num_all_motions()),
-            random_sample=self.random_sample,
-            start_idx=self.motion_start_idx,
-        )
+        num_to_sample = min(self.num_motion_max, self._num_total_motions)
+        if self.random_sample:
+            self._active_motion_ids = np.random.choice(
+                self._all_motion_ids, size=num_to_sample, replace=False,
+            )
+        else:
+            start = self.motion_start_idx
+            indices = np.arange(start, start + num_to_sample) % self._num_total_motions
+            self._active_motion_ids = self._all_motion_ids[indices]
+
+        # Initial values (will be updated in reset)
+        self._sampled_motion_id = int(self._active_motion_ids[0])
+        self._motion_start_time = 0
 
     def forward_motions(self) -> Iterator[int]:
         """
-        Iterates through motions in the motion library.
-
-        Determines the range of motion IDs to process and sequentially loads each motion 
-        into the motion library. Yields the current motion start index during each iteration.
-
-        Yields:
-            int: The currently loaded motion index.
+        Iterates through *all* motions one-by-one (used during evaluation).
+        Yields the motion ID for each motion.
         """
-        motion_ids = range(self.motion_lib.num_all_motions())
-        for motion_start_idx in motion_ids:
-            self.motion_start_idx = motion_start_idx
-            self.motion_lib.load_motions(
-                self.motion_lib_cfg,
-                shape_params=self.gender_betas,
-                random_sample=self.random_sample,
-                silent=False,
-                start_idx=self.motion_start_idx,
-                specific_idxes=None,
-            )
-            yield motion_start_idx
+        for motion_id in self._all_motion_ids:
+            self._current_eval_motion_id = int(motion_id)
+            self._active_motion_ids = np.array([motion_id])
+            yield int(motion_id)
 
     def init_myolegs(self) -> None:
         """
@@ -366,58 +318,35 @@ class MyoLegsIm(MyoLegsTask):
 
     def initialize_motion_state(self) -> None:
         """
-        Retrieves motion data from the motion library and sets the initial pose.
+        Sets the simulation state (qpos / qvel) from pre-computed IK reference data,
+        applying the current episode heading.
         """
         super().init_myolegs()
-        motion_return = self.get_state_from_motionlib_cache(
-            self._sampled_motion_ids,
-            self._motion_start_times,
-            self.global_offset
-        )
-        initial_rot = sRot.from_euler("XYZ", [-np.pi / 2, 0, -np.pi / 2])
-        ref_qpos = motion_return.qpos.flatten()
-        self.mj_data.qpos[:3] = ref_qpos[:3]
-        rotated_quat = (sRot.from_quat(ref_qpos[[4, 5, 6, 3]]) * initial_rot).as_quat()
-        self.mj_data.qpos[3:7] = np.roll(rotated_quat, 1)
 
-        if self.im_eval:
-            motion_id = self.motion_start_idx
+        motion_id = self._sampled_motion_id
+
+        # Look up stored IK solution for this frame
+        ref_qpos = self._lookup_reference_qpos(motion_id, self._motion_start_time)
+        headed_qpos = self._apply_heading(ref_qpos.copy())
+
+        self.mj_data.qpos[:len(headed_qpos)] = headed_qpos
+
+        # Velocity from finite differences of two neighbouring frames
+        if self._motion_start_time > 0:
+            prev_qpos = self._lookup_reference_qpos(
+                motion_id, self._motion_start_time - self.dt
+            )
+            prev_headed = self._apply_heading(prev_qpos.copy())
+            mujoco.mj_differentiatePos(
+                self.mj_model, self.mj_data.qvel, self.dt,
+                prev_headed, headed_qpos,
+            )
         else:
-            # All motions are cached, so we just need to start the index from self.motion_start_idx
-            motion_id = self._sampled_motion_ids[0] + self.motion_start_idx
+            self.mj_data.qvel[:] = 0
 
-        if motion_id in self.initial_pos_data:
-            # Load the initial pose from the initial_pos_data
-            if self.random_start:
-                self.initial_pose = self.initial_pos_data[motion_id][self._motion_start_times[0]]
-            else:
-                self.initial_pose = self.initial_pos_data[motion_id][0]
-            if self.initial_pose is None:
-                breakpoint()
-            self.mj_data.qpos[7:] = self.initial_pose[7:]
-            mujoco.mj_kinematics(self.mj_model, self.mj_data)
-        elif self.initial_pose is not None:
-            # Constant initial pose
-            self.mj_data.qpos[:] = self.initial_pose
-            mujoco.mj_kinematics(self.mj_model, self.mj_data)
-        else:
-            # During IK, the humanoid sometimes reaches unfeasible positions. If that happens, we flag the motion and remove it from the dataset.
-            if self.mj_data.qpos[2] < 0.86 or self.mj_data.qpos[2] > 1:
-                if self.motion_lib._curr_motion_ids[0] not in self.motions_to_remove:
-                    self.motions_to_remove.append(self.motion_lib._curr_motion_ids[0])
-                    print(f"Motion {self.motions_to_remove[-1]} removed")
-            else:
-                # If the motion is flagged, just skip, otherwise compute the initial pose on the fly
-                if self.motion_lib._curr_motion_ids[0] not in self.motions_to_remove:
-                    self.compute_initial_pose()
+        # Zero out joint velocities — only root linear + angular are meaningful
+        self.mj_data.qvel[6:] = 0
 
-        # Set up velocity
-        ref_qvel = motion_return.qvel.flatten()[:6]
-        self.mj_data.qvel[:3] = ref_qvel[:3]
-        self.mj_data.qvel[3:6] = initial_rot.inv().apply(ref_qvel[3:6])
-        self.mj_data.qvel[6:] = np.zeros_like(self.mj_data.qvel[6:])
-
-        # Run kinematics
         mujoco.mj_kinematics(self.mj_model, self.mj_data)
 
     def reset_evaluation_metrics(self) -> None:
@@ -437,9 +366,9 @@ class MyoLegsIm(MyoLegsTask):
         self.body_pos.append(np.full(self.get_body_xpos()[None,].shape, np.nan))
         self.body_rot.append(np.full(self.get_body_xquat()[None,][..., self.track_bodies_id, :].shape, np.nan))
         self.body_vel.append(np.full(self.get_body_linear_vel()[None,][..., self.track_bodies_id, :].shape, np.nan))
-        self.ref_pos.append(np.full(self.get_body_xpos()[None,][..., SMPL_TRACKED_IDS, :].shape, np.nan))
-        self.ref_rot.append(np.full(self.get_body_xquat()[None,][..., SMPL_TRACKED_IDS, :].shape, np.nan))
-        self.ref_vel.append(np.full(self.get_body_linear_vel()[None,][..., SMPL_TRACKED_IDS, :].shape, np.nan))
+        self.ref_pos.append(np.full(self.get_body_xpos()[None,][..., self.track_bodies_id, :].shape, np.nan))
+        self.ref_rot.append(np.full(self.get_body_xquat()[None,][..., self.track_bodies_id, :].shape, np.nan))
+        self.ref_vel.append(np.full(self.get_body_linear_vel()[None,][..., self.track_bodies_id, :].shape, np.nan))
         self.motion_id.append(np.nan)
         self.muscle_forces.append(np.full(self.get_muscle_force().shape, np.nan))
         self.muscle_controls.append(np.full(self.mj_data.ctrl.shape, np.nan))
@@ -464,6 +393,10 @@ class MyoLegsIm(MyoLegsTask):
             obs_size += 3 * len(self.track_bodies)
         if "local_ref_body_pos" in inputs:
             obs_size += 3 * len(self.track_bodies)
+        if "diff_muscle_len" in inputs:
+            obs_size += self.mj_model.nu
+        if "diff_muscle_vel" in inputs:
+            obs_size += self.mj_model.nu
 
         return obs_size
 
@@ -486,16 +419,12 @@ class MyoLegsIm(MyoLegsTask):
         """
         terminated, truncated = False, False
         sim_time = (
-            (self.cur_t) * self.dt
-            + self._motion_start_times
-            + self._motion_start_times_offset
+            (self.cur_t) * self.dt + self._motion_start_time
         )
-        ref_dict = self.get_state_from_motionlib_cache(
-            self._sampled_motion_ids, sim_time, self.global_offset
-        )
+        ref_dict = self.get_state_from_motionlib_cache(sim_time)
         body_pos = self.get_body_xpos()[None,]
         body_pos_subset = body_pos[..., self.reset_bodies_id, :]
-        ref_pos_subset = ref_dict.xpos[..., SMPL_TRACKED_IDS, :]
+        ref_pos_subset = ref_dict.xpos[..., self.reset_bodies_id, :]
         terminated = compute_humanoid_im_reset(
             body_pos_subset,
             ref_pos_subset,
@@ -503,8 +432,8 @@ class MyoLegsIm(MyoLegsTask):
             use_mean=True if self.im_eval else False,
         )[0]
         truncated = (
-            sim_time > self.motion_lib.get_motion_length(self._sampled_motion_ids)
-        )[0]
+            sim_time > self.get_motion_length(self._sampled_motion_id)
+        )
 
         if terminated or truncated:
             self.compute_evaluation_metrics(terminated, sim_time)
@@ -530,122 +459,114 @@ class MyoLegsIm(MyoLegsTask):
         """
         self.mpjpe_value = np.array(self.mpjpe).mean()
         if terminated:
-            self.frame_coverage = sim_time / self.motion_lib.get_motion_length(self._sampled_motion_ids)
+            self.frame_coverage = sim_time / self.get_motion_length(self._sampled_motion_id)
         else:
             self.frame_coverage = 1.0
 
     def reset_task(self, options: Optional[dict] = None) -> None:
         """
-        Resets the task to an initial state based on the current configuration.
-
-        This function initializes motion sampling and start times, considering the mode
-        (test or training), evaluation settings, and optional start time configurations.
-        Random starting times can also be applied if enabled.
-
-        Args:
-            options (dict, optional): A dictionary containing reset options. Supports:
-                - `start_time`: Specifies a custom start time for the motion.
-
-        Updates:
-            - `self._sampled_motion_ids`: IDs of the motions to use after reset.
-            - `self._motion_start_times`: Start times for the motions, either specified, 
-            randomized, or set to zero.
-
-        Notes:
-            - If `self.random_start` is True, the start time is randomly selected from the
-            available time indices for which an initial pose is available.
+        Resets the task: picks a motion, generates heading, sets start time.
         """
-        if self.test:
-            if self.im_eval:
-                self._sampled_motion_ids[:] = 0  # options['motion_id']
-                self._motion_start_times[:] = 0
-                if options is not None and "start_time" in options:
-                    self._motion_start_times[:] = options["start_time"]
-            else:
-                self._sampled_motion_ids[:] = self.motion_lib.sample_motions()
-                self._motion_start_times[:] = 0
-                if options is not None and "start_time" in options:
-                    self._motion_start_times[:] = options["start_time"]
-                elif self.random_start:
-                    motion_id = self.get_true_motion_id()
-                    start_time = np.random.choice(list(self.initial_pos_data[motion_id].keys()))
-                    self._motion_start_times[:] = start_time
+        # ── Pick a motion ────────────────────────────────────────────────
+        if self.test and self.im_eval:
+            # Evaluation mode: use the motion set by forward_motions()
+            self._sampled_motion_id = getattr(
+                self, "_current_eval_motion_id", int(self._active_motion_ids[0])
+            )
         else:
-            self._sampled_motion_ids[:] = self.motion_lib.sample_motions()
-            self._motion_start_times[:] = 0
-            if options is not None and "start_time" in options:
-                self._motion_start_times[:] = options["start_time"]
-            elif self.random_start:
-                motion_id = self.get_true_motion_id()
-                start_time = np.random.choice(list(self.initial_pos_data[motion_id].keys()))
-                self._motion_start_times[:] = start_time
-    
+            # Training or test-run: sample from the active pool
+            self._sampled_motion_id = int(
+                np.random.choice(self._active_motion_ids)
+            )
+
+        # ── Start time ───────────────────────────────────────────────────
+        self._motion_start_time = 0
+        if options is not None and "start_time" in options:
+            self._motion_start_time = options["start_time"]
+        elif self.random_start:
+            motion_id = self._sampled_motion_id
+            if motion_id in self.initial_pos_data:
+                self._motion_start_time = np.random.choice(
+                    list(self.initial_pos_data[motion_id].keys())
+                )
+
+        # ── Heading randomization (per-episode) ─────────────────────────
+        if self._randomize_heading:
+            angle = np.random.uniform(-np.pi, np.pi)
+            self._heading_rot = sRot.from_euler("z", angle)
+        else:
+            self._heading_rot = None
+
     def get_true_motion_id(self) -> int:
+        """Returns the global motion ID (same as ``_sampled_motion_id``)."""
+        return self._sampled_motion_id
+
+    def _lookup_reference_qpos(self, motion_id: int, motion_time: float) -> Optional[np.ndarray]:
         """
-        Calculates the true motion ID based on the current configuration.
+        Returns the IK-computed qpos for the closest cached frame of the given motion.
+        """
+        motion_dict = self.initial_pos_data[motion_id]
+        target_key = motion_time
+        if target_key in motion_dict:
+            return motion_dict[target_key]
+
+        keys = np.array(list(motion_dict.keys()), dtype=float)
+        nearest_key = keys[np.abs(keys - motion_time).argmin()]
+        return motion_dict[nearest_key]
+
+    def get_state_from_motionlib_cache(self, motion_time: np.ndarray) -> dict:
+        """
+        Retrieves (and caches) reference states using the Mujoco reference model.
 
         Returns:
-            int: The true motion ID in the full motion library
-        """
-        motion_id = self._sampled_motion_ids[0] + self.motion_start_idx
-        return motion_id
-
-    def get_state_from_motionlib_cache(
-        self,
-        motion_ids: np.ndarray,
-        motion_times: np.ndarray,
-        offset: Optional[np.ndarray] = None
-    ) -> dict:
-        """
-        Retrieves the motion state from the motion library, with caching for efficiency.
-
-        This function checks if the requested motion state (defined by `motion_ids`, 
-        `motion_times`, and `offset`) is already cached. If the cache is valid, it returns 
-        the cached state. Otherwise, it updates the cache with new data from the motion library.
-
-        Args:
-            motion_ids (np.ndarray): IDs of the motions to retrieve.
-            motion_times (np.ndarray): Time indices for the motions.
-            offset (np.ndarray, optional): Offset to apply to the motions. Defaults to None.
-
-        Returns:
-            dict: Cached or newly retrieved motion state data, containing all the values required
-            for motion imitation.
-
-        Updates:
-            - `self.ref_motion_cache`: Stores the motion IDs, times, offsets, and motion state 
-            data for reuse.
+            dict: Cached or newly computed reference state containing positions, rotations,
+            velocities, and actuator readings.
         """
         if (
-            offset is None
-            or "motion_ids" not in self.ref_motion_cache
-            or self.ref_motion_cache["offset"] is None
-            or len(self.ref_motion_cache["motion_ids"]) != len(motion_ids)
-            or len(self.ref_motion_cache["offset"]) != len(offset)
-            or np.abs(self.ref_motion_cache["motion_ids"] - motion_ids).sum()
-            + np.abs(self.ref_motion_cache["motion_times"] - motion_times).sum()
-            + np.abs(self.ref_motion_cache["offset"] - offset).sum()
-            > 0
+            "motion_id" not in self.ref_motion_cache
+            or self.ref_motion_cache["motion_id"] != self._sampled_motion_id
+            or abs(self.ref_motion_cache["motion_time"] - motion_time) > 1e-6
         ):
-            self.ref_motion_cache["motion_ids"] = (
-                motion_ids.copy()
-            )  # need to clone; otherwise will be overriden
-            self.ref_motion_cache["motion_times"] = (
-                motion_times.copy()
-            )  # need to clone; otherwise will be overriden
-            self.ref_motion_cache["offset"] = (
-                offset.copy() if offset is not None else None
-            )
-            motion_res = self.motion_lib.get_motion_state_intervaled(
-                motion_ids.copy(), motion_times.copy(), offset=offset
-            )
+            self.ref_motion_cache["motion_id"] = self._sampled_motion_id
+            self.ref_motion_cache["motion_time"] = motion_time
 
-            self.ref_motion_cache.update(motion_res)
+            ref_state = self._build_reference_state(motion_time)
+            self.ref_motion_cache.update(ref_state)
 
-            return self.ref_motion_cache
-        
-        else:
-            return self.ref_motion_cache
+        return self.ref_motion_cache
+
+    def _build_reference_state(self, motion_time: np.ndarray) -> Dict[str, np.ndarray]:
+        """
+        Populates the reference Mujoco data buffer using pre-computed IK poses
+        (with heading applied) and returns derived body/muscle states.
+        """
+        motion_id = self._sampled_motion_id
+
+        ref_qpos = self._lookup_reference_qpos(motion_id, motion_time)
+        headed = self._apply_heading(ref_qpos.copy())
+
+        self.ref_data.qpos[:len(headed)] = headed
+        self.ref_data.qvel[:] = 0
+
+        if motion_time > 0:
+            prev_ref_qpos = self._lookup_reference_qpos(motion_id, motion_time - self.dt)
+            prev_headed = self._apply_heading(prev_ref_qpos.copy())
+            mujoco.mj_differentiatePos(
+                self.mj_model, self.ref_data.qvel, self.dt,
+                prev_headed, headed,
+            )
+        mujoco.mj_forward(self.mj_model, self.ref_data)
+
+        return {
+            "xpos": self.get_body_xpos(self.ref_data)[None,],
+            "xquat": self.get_body_xquat(self.ref_data)[None,],
+            "body_vel": self.get_body_linear_vel(self.ref_data)[None,],
+            "body_ang_vel": self.get_body_angular_vel(self.ref_data)[None,],
+            "actuator_length": self.get_muscle_length(self.ref_data),
+            "actuator_velocity": self.get_muscle_velocity(self.ref_data),
+            "qpos": self.get_qpos(self.ref_data),
+            "qvel": self.get_qvel(self.ref_data),
+        }
 
     def compute_task_obs(self) -> np.ndarray:
         """
@@ -669,29 +590,28 @@ class MyoLegsIm(MyoLegsTask):
             - `diff_local_vel`: Differences in local body velocities relative to references.
             - `local_ref_body_pos`: Local reference body positions.
         """
-        motion_times = (
-            (self.cur_t + 1) * self.dt
-            + self._motion_start_times
-            + self._motion_start_times_offset
-        )
+
         ref_dict = self.get_state_from_motionlib_cache(
-            self._sampled_motion_ids, motion_times, self.global_offset
+            (self.cur_t + 1) * self.dt + self._motion_start_time
         )
 
         body_pos = self.get_body_xpos()[None,]
         body_rot = self.get_body_xquat()[None,]
+        body_vel = self.get_body_linear_vel()[None,]
+        muscle_len = self.get_muscle_length()
+        muscle_vel = self.get_muscle_velocity()
 
         root_rot = body_rot[:, 0]
         root_pos = body_pos[:, 0]
-
         body_pos_subset = body_pos[..., self.track_bodies_id, :]
         body_rot_subset = body_rot[..., self.track_bodies_id, :]
-        ref_pos_subset = ref_dict.xpos[..., SMPL_TRACKED_IDS, :]
-        ref_rot_subset = ref_dict.xquat[..., SMPL_TRACKED_IDS, :]
-
-        body_vel = self.get_body_linear_vel()[None,]
         body_vel_subset = body_vel[..., self.track_bodies_id, :]
-        ref_body_vel_subset = ref_dict.body_vel[..., SMPL_TRACKED_IDS, :]
+
+        ref_pos_subset = ref_dict.xpos[None,][..., self.track_bodies_id, :]
+        ref_rot_subset = ref_dict.xquat[None,][..., self.track_bodies_id, :]
+        ref_body_vel_subset = ref_dict.body_vel[None,][..., self.track_bodies_id, :]
+        ref_muscle_len = ref_dict.actuator_length
+        ref_muscle_vel = ref_dict.actuator_velocity
 
         if self.recording_biomechanics:
             self.record_biomechanics(
@@ -710,6 +630,10 @@ class MyoLegsIm(MyoLegsTask):
             body_vel_subset,
             ref_pos_subset,
             ref_body_vel_subset,
+            muscle_len,
+            muscle_vel,
+            ref_muscle_len,
+            ref_muscle_vel,
             self.num_traj_samples,
         )
 
@@ -720,6 +644,10 @@ class MyoLegsIm(MyoLegsTask):
             task_obs["diff_local_vel"] = full_task_obs["diff_local_vel"]
         if "local_ref_body_pos" in self.cfg.run.task_inputs:
             task_obs["local_ref_body_pos"] = full_task_obs["local_ref_body_pos"]
+        if "diff_muscle_len" in self.cfg.run.task_inputs:
+            task_obs["diff_muscle_len"] = full_task_obs['diff_muscle_len']
+        if "diff_muscle_vel" in self.cfg.run.task_inputs:
+            task_obs["diff_muscle_vel"] = full_task_obs['diff_muscle_vel']
 
         return np.concatenate(
             [v.ravel() for v in task_obs.values()], axis=0, dtype=self.dtype
@@ -784,6 +712,27 @@ class MyoLegsIm(MyoLegsTask):
         """
         self.mpjpe.append(np.linalg.norm(body_pos - ref_pos, axis=-1).mean())
 
+    def compute_muscle_imitation_reward(self, ref_state: dict) -> Tuple[float, Dict[str, float]]:
+        """
+        Matches simulated muscle length/velocity to the IK reference.
+        """
+        ref_lengths = ref_state.actuator_length[0]
+        ref_velocities = ref_state.actuator_velocity[0]
+        curr_lengths = np.nan_to_num(self.mj_data.actuator_length.copy())
+        curr_velocities = np.nan_to_num(self.mj_data.actuator_velocity.copy())
+
+        k_len = self.reward_specs.get("k_muscle_len", 10.0)
+        k_vel = self.reward_specs.get("k_muscle_vel", 1.0)
+        w_len = self.reward_specs.get("w_muscle_len", 0.0)
+        w_vel = self.reward_specs.get("w_muscle_vel", 0.0)
+
+        r_len = np.exp(-k_len * ((curr_lengths - ref_lengths) ** 2).mean())
+        r_vel = np.exp(-k_vel * ((curr_velocities - ref_velocities) ** 2).mean())
+
+        reward = w_len * r_len + w_vel * r_vel
+        reward_raw = {"r_muscle_len": r_len, "r_muscle_vel": r_vel}
+        return reward, reward_raw
+
     def compute_reward(self, action: Optional[np.ndarray] = None) -> float:
         """
         Computes the reward for the current simulation step.
@@ -802,23 +751,19 @@ class MyoLegsIm(MyoLegsTask):
         Updates:
             - `self.reward_info`: Stores raw reward components for analysis.
         """
-        motion_times = (
-            (self.cur_t) * self.dt
-            + self._motion_start_times
-            + self._motion_start_times_offset
-        )
         ref_dict = self.get_state_from_motionlib_cache(
-            self._sampled_motion_ids, motion_times, self.global_offset
+            (self.cur_t) * self.dt + self._motion_start_time
         )
+        muscle_reward, muscle_reward_raw = self.compute_muscle_imitation_reward(ref_dict)
 
         body_pos = self.get_body_xpos()[None,]
 
         body_pos_subset = body_pos[..., self.track_bodies_id, :]
-        ref_pos_subset = ref_dict.xpos[..., SMPL_TRACKED_IDS, :]
+        ref_pos_subset = ref_dict.xpos[..., self.track_bodies_id, :]
 
         body_vel = self.get_body_linear_vel()[None,]
         body_vel_subset = body_vel[..., self.track_bodies_id, :]
-        ref_body_vel_subset = ref_dict.body_vel[..., SMPL_TRACKED_IDS, :]
+        ref_body_vel_subset = ref_dict.body_vel[..., self.track_bodies_id, :]
 
         reward, reward_raw = compute_imitation_reward(
             body_pos_subset,
@@ -828,37 +773,19 @@ class MyoLegsIm(MyoLegsTask):
             self.reward_specs,
         )
 
-        # upright_reward = self.compute_upright_reward()
-        # reward += upright_reward * self.reward_specs["w_upright"]
-
         energy_reward = np.mean(self.curr_power_usage)
         self.curr_power_usage = []
 
         reward += energy_reward * self.reward_specs["w_energy"]
+        reward += muscle_reward
 
         self.reward_info = reward_raw
-        # self.reward_info["upright_reward"] = upright_reward
         self.reward_info["energy_reward"] = energy_reward
+        self.reward_info.update(muscle_reward_raw)
 
         self.record_evaluation_metrics(body_pos_subset, ref_pos_subset, body_vel_subset, ref_body_vel_subset)
 
         return reward
-    
-    # def compute_upright_reward(self) -> float:
-    #     """
-    #     Computes the reward for maintaining an upright posture.
-
-    #     The reward is based on the angles of tilt in the forward and sideways directions, 
-    #     calculated using trigonometric components of the root tilt.
-
-    #     Returns:
-    #         float: The upright reward, where a value close to 1 indicates a nearly upright posture.
-    #     """
-    #     upright_trigs = self.proprioception['root_tilt']
-    #     fall_forward = np.angle(upright_trigs[0] + 1j * upright_trigs[1])
-    #     fall_sideways = np.angle(upright_trigs[2] + 1j * upright_trigs[3])
-    #     upright_reward = np.exp(-3 * (fall_forward ** 2 + fall_sideways ** 2))
-    #     return upright_reward
 
     def compute_energy_reward(self, action: np.ndarray) -> float:
         """
@@ -881,12 +808,9 @@ class MyoLegsIm(MyoLegsTask):
 
     def start_eval(self, im_eval=True):
         """
-        Prepares the environment for evaluation.
-
-        Args:
-            im_eval (bool): Whether to enable imitation evaluation mode. Defaults to True.
+        Prepares the environment for evaluation (no heading randomization).
         """
-        self.motion_lib_cfg.randomize_heading = False
+        self._randomize_heading = False
         self.im_eval = im_eval
         self.test = True
         self._temp_termination_distance = self.termination_distance
@@ -895,7 +819,7 @@ class MyoLegsIm(MyoLegsTask):
         """
         Concludes the evaluation process and restores training settings.
         """
-        self.motion_lib_cfg.randomize_heading = True
+        self._randomize_heading = True
         self.im_eval = False
         self.test = False
         self.termination_distance = self._temp_termination_distance
@@ -907,55 +831,43 @@ class MyoLegsIm(MyoLegsTask):
         """
         return self.mj_data.actuator_force
 
-    def compute_initial_pose(self, ref_dict: Optional[dict] = None) -> None:
+    # ──────────────────────────────────────────────────────────────────────
+    # Heading helpers
+    # ──────────────────────────────────────────────────────────────────────
+    def _apply_heading(self, qpos: np.ndarray) -> np.ndarray:
         """
-        Computes the initial pose by optimizing joint positions to minimize deviations from defaults 
-        while aligning the body positions with reference positions.
+        Applies the current episode heading rotation to the root pose (first 7 qpos).
+        Joint angles (qpos[7:]) are left unchanged.
 
-        Uses a constrained optimization method to determine the optimal joint configuration.
-
-        Args:
-            ref_dict (Optional[dict]): Reference motion data containing target positions. 
-                If None, reference data is retrieved from the motion library cache.
-
-        Notes:
-            - Joint bounds are derived from the Mujoco model's joint range.
+        If ``self._heading_rot`` is None (heading disabled), returns qpos unmodified.
         """
-        initial_qpos = self.mj_data.qpos.copy()
-        if ref_dict is None:
-            ref_dict = self.get_state_from_motionlib_cache(
-                self._sampled_motion_ids, self._motion_start_times, self.global_offset
-            )
-        ref_pos_subset = ref_dict.xpos[..., SMPL_TRACKED_IDS[1:], :]  # remove root
+        if self._heading_rot is None:
+            return qpos
 
-        joint_range = self.mj_model.jnt_range.copy()
-        bounds = joint_range[1:, :]
-        # make each row a 2-tuple
-        bounds = [tuple(b) for b in bounds]
+        # Rotate translation (X, Y change; Z = height stays)
+        qpos[:3] = self._heading_rot.apply(qpos[:3])
 
-        def distance_to_default(qpos):
-            mujoco.mj_kinematics(self.mj_model, self.mj_data)
-            return np.linalg.norm(qpos - initial_qpos[7:]) * 5
+        # Compose heading with root quaternion (Mujoco wxyz format)
+        root_xyzw = qpos[np.array([4, 5, 6, 3])]              # wxyz → xyzw
+        new_xyzw = (
+            self._heading_rot * sRot.from_quat(root_xyzw)
+        ).as_quat()
+        qpos[3:7] = np.roll(new_xyzw, 1)                      # xyzw → wxyz
 
-        def distance_to_ref(qpos):
-            self.mj_data.qpos[7:] = qpos
-            mujoco.mj_kinematics(self.mj_model, self.mj_data)
-            body_pos = self.get_body_xpos()[None,]
-            body_pos_subset = body_pos[..., self.track_bodies_id[1:], :]  # remove root
-            return np.linalg.norm(body_pos_subset - ref_pos_subset, axis=-1).sum()
+        return qpos
 
-        out = scipy.optimize.fmin_slsqp(
-            func=distance_to_default,
-            # x0=self.mj_data.qpos[7:],
-            x0=self.previous_pose[7:] if self.previous_pose is not None else initial_qpos[7:],
-            eqcons=[distance_to_ref],
-            bounds=bounds,
-            iprint=1,
-            iter=200,
-            acc=0.02,
-        )
-
-        self.initial_pose = np.concatenate([initial_qpos[:7], out])
+    def get_motion_length(self, motion_id: int) -> float:
+        """
+        Returns the duration (seconds) of the given motion.
+        Falls back to counting frame keys if metadata is unavailable.
+        """
+        if motion_id in self._motion_metadata:
+            return self._motion_metadata[motion_id]["length"]
+        # Fallback: infer from stored frame times
+        if motion_id in self.initial_pos_data:
+            times = list(self.initial_pos_data[motion_id].keys())
+            return max(times) if times else 0.0
+        return 0.0
 
     def step(self, action):
         """
@@ -991,6 +903,10 @@ def compute_imitation_observations(
     body_vel: np.ndarray,
     ref_body_pos: np.ndarray,
     ref_body_vel: np.ndarray,
+    muscle_len: np.ndarray,
+    muscle_vel: np.ndarray,
+    ref_muscle_len: np.ndarray,
+    ref_muscle_vel: np.ndarray,
     time_steps: int,
 ) -> Dict[str, np.ndarray]:
     """
@@ -1048,6 +964,9 @@ def compute_imitation_observations(
     obs["local_ref_body_pos"] = npt_utils.quat_rotate(
         heading_inv_rot_expand.reshape(-1, 4), local_ref_body_pos.reshape(-1, 3)
     )
+    
+    obs['diff_muscle_len'] = ref_muscle_len - muscle_len
+    obs['diff_muscle_vel'] = ref_muscle_vel - muscle_vel
 
     return obs
 

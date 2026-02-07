@@ -1,16 +1,12 @@
 import math
 import time
 import torch
-import logging
 import numpy as np
 
 from typing import List, Optional, Tuple
 
 from myohuman.agents.agent import Agent
 from myohuman.learning.learning_utils import to_test, to_train, batch_to
-
-
-logger = logging.getLogger(__name__)
 
 
 class AgentPPO(Agent):

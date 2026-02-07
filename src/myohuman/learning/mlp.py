@@ -1,4 +1,3 @@
-# This file contains code adapted from:
 import torch
 import torch.nn as nn
 

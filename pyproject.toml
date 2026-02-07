@@ -44,3 +44,4 @@ smplx = {git = "https://github.com/ZhengyiLuo/smplx.git", rev = "a5b8e4ac14f79f3
 lxml = "^6.0.2"
 httpx = "^0.28.1"
 openai = "^2.8.1"
+huggingface-hub = "^1.2.3"

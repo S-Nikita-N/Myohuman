@@ -85,22 +85,22 @@
     </asset>
 
     <equality>
-        <joint joint1="knee_angle_r_translation2" joint2="knee_angle_r" name="knee_angle_r_translation2_constraint" polycoef="7.69254e-11 0.00587971 -0.00125622 -2.61846e-06 6.24355e-07" solimp="0.9999 0.9999 0.001 0.5 2"/>
-        <joint joint1="knee_angle_r_translation1" joint2="knee_angle_r" name="knee_angle_r_translation1_constraint" polycoef="9.53733e-08 0.00312879 -0.00230804 0.000561561 5.68366e-07" solimp="0.9999 0.9999 0.001 0.5 2"/>
-        <joint joint1="knee_angle_r_rotation2" joint2="knee_angle_r" name="knee_angle_r_rotation2_constraint" polycoef="-1.47325e-08 0.0791 -0.0328478 -0.0252183 0.0108321" solimp="0.9999 0.9999 0.001 0.5 2"/>
-        <joint joint1="knee_angle_r_rotation3" joint2="knee_angle_r" name="knee_angle_r_rotation3_constraint" polycoef="1.08939e-08 0.369499 -0.169478 0.0251643 3.50498e-07" solimp="0.9999 0.9999 0.001 0.5 2"/>
-        <joint joint1="knee_angle_r_beta_translation2" joint2="knee_angle_r" name="knee_angle_r_beta_translation2_constraint" polycoef="-0.0108281 -0.0487847 0.00927644 0.0131673 -0.00349673" solimp="0.9999 0.9999 0.001 0.5 2"/>
-        <joint joint1="knee_angle_r_beta_translation1" joint2="knee_angle_r" name="knee_angle_r_beta_translation1_constraint" polycoef="0.0524192 -0.0150188 -0.0340522 0.0133393 -0.000879151" solimp="0.9999 0.9999 0.001 0.5 2"/>
-        <joint joint1="knee_angle_r_beta_rotation1" joint2="knee_angle_r" name="knee_angle_r_beta_rotation1_constraint" polycoef="0.010506 0.0247615 -1.31647 0.716337 -0.138302" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_translation2_r" joint2="knee_angle_r" name="knee_angle_translation2_r_constraint" polycoef="7.69254e-11 0.00587971 -0.00125622 -2.61846e-06 6.24355e-07" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_translation1_r" joint2="knee_angle_r" name="knee_angle_translation1_r_constraint" polycoef="9.53733e-08 0.00312879 -0.00230804 0.000561561 5.68366e-07" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_rotation2_r" joint2="knee_angle_r" name="knee_angle_rotation2_r_constraint" polycoef="-1.47325e-08 0.0791 -0.0328478 -0.0252183 0.0108321" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_rotation3_r" joint2="knee_angle_r" name="knee_angle_rotation3_r_constraint" polycoef="1.08939e-08 0.369499 -0.169478 0.0251643 3.50498e-07" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_beta_translation2_r" joint2="knee_angle_r" name="knee_angle_beta_translation2_r_constraint" polycoef="-0.0108281 -0.0487847 0.00927644 0.0131673 -0.00349673" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_beta_translation1_r" joint2="knee_angle_r" name="knee_angle_beta_translation1_r_constraint" polycoef="0.0524192 -0.0150188 -0.0340522 0.0133393 -0.000879151" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_beta_rotation1_r" joint2="knee_angle_r" name="knee_angle_beta_rotation1_r_constraint" polycoef="0.010506 0.0247615 -1.31647 0.716337 -0.138302" solimp="0.9999 0.9999 0.001 0.5 2"/>
         <!-- <joint joint1="subtalar_angle_r" name="subtalar_angle_r_constraint" polycoef="0 0 0 0 0"/> -->
         <!-- <joint joint1="mtp_angle_r" name="mtp_angle_r_constraint" polycoef="0 0 0 0 0"/> -->
-        <joint joint1="knee_angle_l_translation2" joint2="knee_angle_l" name="knee_angle_l_translation2_constraint" polycoef="-7.69254e-11 -0.00587971 0.00125622 2.61846e-06 -6.24355e-07" solimp="0.9999 0.9999 0.001 0.5 2"/>
-        <joint joint1="knee_angle_l_translation1" joint2="knee_angle_l" name="knee_angle_l_translation1_constraint" polycoef="9.53733e-08 0.00312879 -0.00230804 0.000561561 5.68366e-07" solimp="0.9999 0.9999 0.001 0.5 2"/>
-        <joint joint1="knee_angle_l_rotation2" joint2="knee_angle_l" name="knee_angle_l_rotation2_constraint" polycoef="-1.47325e-08 0.0791 -0.0328478 -0.0252183 0.0108321" solimp="0.9999 0.9999 0.001 0.5 2"/>
-        <joint joint1="knee_angle_l_rotation3" joint2="knee_angle_l" name="knee_angle_l_rotation3_constraint" polycoef="-1.08939e-08 -0.369499 0.169478 -0.0251643 -3.50498e-07" solimp="0.9999 0.9999 0.001 0.5 2"/>
-        <joint joint1="knee_angle_l_beta_translation2" joint2="knee_angle_l" name="knee_angle_l_beta_translation2_constraint" polycoef="-0.0108281 -0.0487847 0.00927644 0.0131673 -0.00349673" solimp="0.9999 0.9999 0.001 0.5 2"/>
-        <joint joint1="knee_angle_l_beta_translation1" joint2="knee_angle_l" name="knee_angle_l_beta_translation1_constraint" polycoef="0.0524192 -0.0150188 -0.0340522 0.0133393 -0.000879151" solimp="0.9999 0.9999 0.001 0.5 2"/>
-        <joint joint1="knee_angle_l_beta_rotation1" joint2="knee_angle_l" name="knee_angle_l_beta_rotation1_constraint" polycoef="0.010506 0.0247615 -1.31647 0.716337 -0.138302" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_translation2_l" joint2="knee_angle_l" name="knee_angle_translation2_l_constraint" polycoef="-7.69254e-11 -0.00587971 0.00125622 2.61846e-06 -6.24355e-07" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_translation1_l" joint2="knee_angle_l" name="knee_angle_translation1_l_constraint" polycoef="9.53733e-08 0.00312879 -0.00230804 0.000561561 5.68366e-07" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_rotation2_l" joint2="knee_angle_l" name="knee_angle_rotation2_l_constraint" polycoef="-1.47325e-08 0.0791 -0.0328478 -0.0252183 0.0108321" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_rotation3_l" joint2="knee_angle_l" name="knee_angle_rotation3_l_constraint" polycoef="-1.08939e-08 -0.369499 0.169478 -0.0251643 -3.50498e-07" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_beta_translation2_l" joint2="knee_angle_l" name="knee_angle_beta_translation2_l_constraint" polycoef="-0.0108281 -0.0487847 0.00927644 0.0131673 -0.00349673" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_beta_translation1_l" joint2="knee_angle_l" name="knee_angle_beta_translation1_l_constraint" polycoef="0.0524192 -0.0150188 -0.0340522 0.0133393 -0.000879151" solimp="0.9999 0.9999 0.001 0.5 2"/>
+        <joint joint1="knee_angle_beta_rotation1_l" joint2="knee_angle_l" name="knee_angle_beta_rotation1_l_constraint" polycoef="0.010506 0.0247615 -1.31647 0.716337 -0.138302" solimp="0.9999 0.9999 0.001 0.5 2"/>
     </equality>
 
     <sensor>
@@ -117,42 +117,42 @@
         <framelinvel name="head_vel" objtype="body" objname="head"/>
         <framelinvel name="thorax_vel" objtype="body" objname="thorax"/>
 
-        <framelinvel name="clavicle_vel" objtype="body" objname="clavicle"/>
-        <framelinvel name="clavphant_vel" objtype="body" objname="clavphant"/>
-        <framelinvel name="scapula_vel" objtype="body" objname="scapula"/>
-        <framelinvel name="scapphant_vel" objtype="body" objname="scapphant"/>
-        <framelinvel name="humphant_vel" objtype="body" objname="humphant"/>
-        <framelinvel name="humphant1_vel" objtype="body" objname="humphant1"/>
-        <framelinvel name="humerus_vel" objtype="body" objname="humerus"/>
-        <framelinvel name="ulna_vel" objtype="body" objname="ulna"/>
-        <framelinvel name="radius_vel" objtype="body" objname="radius"/>
-        <framelinvel name="lunate_vel" objtype="body" objname="lunate"/>
-        <framelinvel name="scaphoid_vel" objtype="body" objname="scaphoid"/>
-        <framelinvel name="pisiform_vel" objtype="body" objname="pisiform"/>
-        <framelinvel name="triquetrum_vel" objtype="body" objname="triquetrum"/>
-        <framelinvel name="capitate_vel" objtype="body" objname="capitate"/>
-        <framelinvel name="trapezium_vel" objtype="body" objname="trapezium"/>
-        <framelinvel name="firstmc_vel" objtype="body" objname="firstmc"/>
-        <framelinvel name="proximal_thumb_vel" objtype="body" objname="proximal_thumb"/>
-        <framelinvel name="distal_thumb_vel" objtype="body" objname="distal_thumb"/>
-        <framelinvel name="trapezoid_vel" objtype="body" objname="trapezoid"/>
-        <framelinvel name="hamate_vel" objtype="body" objname="hamate"/>
-        <framelinvel name="secondmc_vel" objtype="body" objname="secondmc"/>
-        <framelinvel name="proxph2_vel" objtype="body" objname="proxph2"/>
-        <framelinvel name="midph2_vel" objtype="body" objname="midph2"/>
-        <framelinvel name="distph2_vel" objtype="body" objname="distph2"/>
-        <framelinvel name="thirdmc_vel" objtype="body" objname="thirdmc"/>
-        <framelinvel name="proxph3_vel" objtype="body" objname="proxph3"/>
-        <framelinvel name="midph3_vel" objtype="body" objname="midph3"/>
-        <framelinvel name="distph3_vel" objtype="body" objname="distph3"/>
-        <framelinvel name="fourthmc_vel" objtype="body" objname="fourthmc"/>
-        <framelinvel name="proxph4_vel" objtype="body" objname="proxph4"/>
-        <framelinvel name="midph4_vel" objtype="body" objname="midph4"/>
-        <framelinvel name="distph4_vel" objtype="body" objname="distph4"/>
-        <framelinvel name="fifthmc_vel" objtype="body" objname="fifthmc"/>
-        <framelinvel name="proxph5_vel" objtype="body" objname="proxph5"/>
-        <framelinvel name="midph5_vel" objtype="body" objname="midph5"/>
-        <framelinvel name="distph5_vel" objtype="body" objname="distph5"/>
+        <framelinvel name="clavicle_r_vel" objtype="body" objname="clavicle_r"/>
+        <framelinvel name="clavphant_r_vel" objtype="body" objname="clavphant_r"/>
+        <framelinvel name="scapula_r_vel" objtype="body" objname="scapula_r"/>
+        <framelinvel name="scapphant_r_vel" objtype="body" objname="scapphant_r"/>
+        <framelinvel name="humphant_r_vel" objtype="body" objname="humphant_r"/>
+        <framelinvel name="humphant1_r_vel" objtype="body" objname="humphant1_r"/>
+        <framelinvel name="humerus_r_vel" objtype="body" objname="humerus_r"/>
+        <framelinvel name="ulna_r_vel" objtype="body" objname="ulna_r"/>
+        <framelinvel name="radius_r_vel" objtype="body" objname="radius_r"/>
+        <framelinvel name="lunate_r_vel" objtype="body" objname="lunate_r"/>
+        <framelinvel name="scaphoid_r_vel" objtype="body" objname="scaphoid_r"/>
+        <framelinvel name="pisiform_r_vel" objtype="body" objname="pisiform_r"/>
+        <framelinvel name="triquetrum_r_vel" objtype="body" objname="triquetrum_r"/>
+        <framelinvel name="capitate_r_vel" objtype="body" objname="capitate_r"/>
+        <framelinvel name="trapezium_r_vel" objtype="body" objname="trapezium_r"/>
+        <framelinvel name="firstmc_r_vel" objtype="body" objname="firstmc_r"/>
+        <framelinvel name="proximal_thumb_vel" objtype="body" objname="proximal_thumb_r"/>
+        <framelinvel name="distal_r_thumb_vel" objtype="body" objname="distal_thumb_r"/>
+        <framelinvel name="trapezoid_r_vel" objtype="body" objname="trapezoid_r"/>
+        <framelinvel name="hamate_r_vel" objtype="body" objname="hamate_r"/>
+        <framelinvel name="secondmc_r_vel" objtype="body" objname="secondmc_r"/>
+        <framelinvel name="proxph2_r_vel" objtype="body" objname="proxph2_r"/>
+        <framelinvel name="midph2_r_vel" objtype="body" objname="midph2_r"/>
+        <framelinvel name="distph2_r_vel" objtype="body" objname="distph2_r"/>
+        <framelinvel name="thirdmc_r_vel" objtype="body" objname="thirdmc_r"/>
+        <framelinvel name="proxph3_r_vel" objtype="body" objname="proxph3_r"/>
+        <framelinvel name="midph3_r_vel" objtype="body" objname="midph3_r"/>
+        <framelinvel name="distph3_r_vel" objtype="body" objname="distph3_r"/>
+        <framelinvel name="fourthmc_r_vel" objtype="body" objname="fourthmc_r"/>
+        <framelinvel name="proxph4_r_vel" objtype="body" objname="proxph4_r"/>
+        <framelinvel name="midph4_r_vel" objtype="body" objname="midph4_r"/>
+        <framelinvel name="distph4_r_vel" objtype="body" objname="distph4_r"/>
+        <framelinvel name="fifthmc_r_vel" objtype="body" objname="fifthmc_r"/>
+        <framelinvel name="proxph5_r_vel" objtype="body" objname="proxph5_r"/>
+        <framelinvel name="midph5_r_vel" objtype="body" objname="midph5_r"/>
+        <framelinvel name="distph5_r_vel" objtype="body" objname="distph5_r"/>
 
         <framelinvel name="clavicle_l_vel" objtype="body" objname="clavicle_l"/>
         <framelinvel name="clavphant_l_vel" objtype="body" objname="clavphant_l"/>
@@ -221,42 +221,42 @@
         <frameangvel name="head_angvel" objtype="body" objname="head"/>
         <frameangvel name="thorax_angvel" objtype="body" objname="thorax"/>
 
-        <frameangvel name="clavicle_angvel" objtype="body" objname="clavicle"/>
-        <frameangvel name="clavphant_angvel" objtype="body" objname="clavphant"/>
-        <frameangvel name="scapula_angvel" objtype="body" objname="scapula"/>
-        <frameangvel name="scapphant_angvel" objtype="body" objname="scapphant"/>
-        <frameangvel name="humphant_angvel" objtype="body" objname="humphant"/>
-        <frameangvel name="humphant1_angvel" objtype="body" objname="humphant1"/>
-        <frameangvel name="humerus_angvel" objtype="body" objname="humerus"/>
-        <frameangvel name="ulna_angvel" objtype="body" objname="ulna"/>
-        <frameangvel name="radius_angvel" objtype="body" objname="radius"/>
-        <frameangvel name="lunate_angvel" objtype="body" objname="lunate"/>
-        <frameangvel name="scaphoid_angvel" objtype="body" objname="scaphoid"/>
-        <frameangvel name="pisiform_angvel" objtype="body" objname="pisiform"/>
-        <frameangvel name="triquetrum_angvel" objtype="body" objname="triquetrum"/>
-        <frameangvel name="capitate_angvel" objtype="body" objname="capitate"/>
-        <frameangvel name="trapezium_angvel" objtype="body" objname="trapezium"/>
-        <frameangvel name="firstmc_angvel" objtype="body" objname="firstmc"/>
-        <frameangvel name="proximal_thumb_angvel" objtype="body" objname="proximal_thumb"/>
-        <frameangvel name="distal_thumb_angvel" objtype="body" objname="distal_thumb"/>
-        <frameangvel name="trapezoid_angvel" objtype="body" objname="trapezoid"/>
-        <frameangvel name="hamate_angvel" objtype="body" objname="hamate"/>
-        <frameangvel name="secondmc_angvel" objtype="body" objname="secondmc"/>
-        <frameangvel name="proxph2_angvel" objtype="body" objname="proxph2"/>
-        <frameangvel name="midph2_angvel" objtype="body" objname="midph2"/>
-        <frameangvel name="distph2_angvel" objtype="body" objname="distph2"/>
-        <frameangvel name="thirdmc_angvel" objtype="body" objname="thirdmc"/>
-        <frameangvel name="proxph3_angvel" objtype="body" objname="proxph3"/>
-        <frameangvel name="midph3_angvel" objtype="body" objname="midph3"/>
-        <frameangvel name="distph3_angvel" objtype="body" objname="distph3"/>
-        <frameangvel name="fourthmc_angvel" objtype="body" objname="fourthmc"/>
-        <frameangvel name="proxph4_angvel" objtype="body" objname="proxph4"/>
-        <frameangvel name="midph4_angvel" objtype="body" objname="midph4"/>
-        <frameangvel name="distph4_angvel" objtype="body" objname="distph4"/>
-        <frameangvel name="fifthmc_angvel" objtype="body" objname="fifthmc"/>
-        <frameangvel name="proxph5_angvel" objtype="body" objname="proxph5"/>
-        <frameangvel name="midph5_angvel" objtype="body" objname="midph5"/>
-        <frameangvel name="distph5_angvel" objtype="body" objname="distph5"/>
+        <frameangvel name="clavicle_r_angvel" objtype="body" objname="clavicle_r"/>
+        <frameangvel name="clavphant_r_angvel" objtype="body" objname="clavphant_r"/>
+        <frameangvel name="scapula_r_angvel" objtype="body" objname="scapula_r"/>
+        <frameangvel name="scapphant_r_angvel" objtype="body" objname="scapphant_r"/>
+        <frameangvel name="humphant_r_angvel" objtype="body" objname="humphant_r"/>
+        <frameangvel name="humphant1_r_angvel" objtype="body" objname="humphant1_r"/>
+        <frameangvel name="humerus_r_angvel" objtype="body" objname="humerus_r"/>
+        <frameangvel name="ulna_r_angvel" objtype="body" objname="ulna_r"/>
+        <frameangvel name="radius_r_angvel" objtype="body" objname="radius_r"/>
+        <frameangvel name="lunate_r_angvel" objtype="body" objname="lunate_r"/>
+        <frameangvel name="scaphoid_r_angvel" objtype="body" objname="scaphoid_r"/>
+        <frameangvel name="pisiform_r_angvel" objtype="body" objname="pisiform_r"/>
+        <frameangvel name="triquetrum_r_angvel" objtype="body" objname="triquetrum_r"/>
+        <frameangvel name="capitate_r_angvel" objtype="body" objname="capitate_r"/>
+        <frameangvel name="trapezium_r_angvel" objtype="body" objname="trapezium_r"/>
+        <frameangvel name="firstmc_r_angvel" objtype="body" objname="firstmc_r"/>
+        <frameangvel name="proximal_thumb_r_angvel" objtype="body" objname="proximal_thumb_r"/>
+        <frameangvel name="distal_thumb_r_angvel" objtype="body" objname="distal_thumb_r"/>
+        <frameangvel name="trapezoid_r_angvel" objtype="body" objname="trapezoid_r"/>
+        <frameangvel name="hamate_r_angvel" objtype="body" objname="hamate_r"/>
+        <frameangvel name="secondmc_r_angvel" objtype="body" objname="secondmc_r"/>
+        <frameangvel name="proxph2_r_angvel" objtype="body" objname="proxph2_r"/>
+        <frameangvel name="midph2_r_angvel" objtype="body" objname="midph2_r"/>
+        <frameangvel name="distph2_r_angvel" objtype="body" objname="distph2_r"/>
+        <frameangvel name="thirdmc_r_angvel" objtype="body" objname="thirdmc_r"/>
+        <frameangvel name="proxph3_r_angvel" objtype="body" objname="proxph3_r"/>
+        <frameangvel name="midph3_r_angvel" objtype="body" objname="midph3_r"/>
+        <frameangvel name="distph3_r_angvel" objtype="body" objname="distph3_r"/>
+        <frameangvel name="fourthmc_r_angvel" objtype="body" objname="fourthmc_r"/>
+        <frameangvel name="proxph4_r_angvel" objtype="body" objname="proxph4_r"/>
+        <frameangvel name="midph4_r_angvel" objtype="body" objname="midph4_r"/>
+        <frameangvel name="distph4_r_angvel" objtype="body" objname="distph4_r"/>
+        <frameangvel name="fifthmc_r_angvel" objtype="body" objname="fifthmc_r"/>
+        <frameangvel name="proxph5_r_angvel" objtype="body" objname="proxph5_r"/>
+        <frameangvel name="midph5_r_angvel" objtype="body" objname="midph5_r"/>
+        <frameangvel name="distph5_r_angvel" objtype="body" objname="distph5_r"/>
 
         <frameangvel name="clavicle_l_angvel" objtype="body" objname="clavicle_l"/>
         <frameangvel name="clavphant_l_angvel" objtype="body" objname="clavphant_l"/>
