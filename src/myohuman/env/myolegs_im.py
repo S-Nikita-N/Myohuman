@@ -2,8 +2,6 @@ import os
 import sys
 import joblib
 import numpy as np
-import scipy
-import torch
 import mujoco
 import logging
 import mujoco.viewer
@@ -18,7 +16,6 @@ from scipy.spatial.transform import Rotation as sRot
 
 from myohuman.env.myolegs_task import MyoLegsTask
 from myohuman.utils.visual_capsule import add_visual_capsule
-from myohuman.KinesisCore.kinesis_core import KinesisCore
 
 
 path_root = Path(__file__).resolve().parents[2]
@@ -36,30 +33,12 @@ MYOLEG_TRACKED_BODIES = [
     "toes_l",    # Левые пальцы стопы
     "toes_r",    # Правые пальцы стопы
     "head",       # Голова
-    "humerus",    # Правая плечевая кость
-    "radius",     # Правое предплечье
-    "lunate",     # Правое запятье
+    "humerus_r",    # Правая плечевая кость
+    "radius_r",     # Правое предплечье
+    "lunate_r",     # Правое запятье
     'humerus_l',  # Левая плечевая кость
     'radius_l',   # Левое предплечье
     'lunate_l',   # Левое запястье
-]
-
-# Соответствующие ID из списка SMPL
-SMPL_TRACKED_IDS = [
-    0,   # Pelvis
-    2,   # L_Knee
-    6,   # R_Knee
-    3,   # L_Ankle
-    7,   # R_Ankle
-    4,   # L_Toe
-    8,   # R_Toe
-    13,  # Head
-    20,  # R_Shoulder
-    21,  # R_Elbow
-    22,  # R_Wrist
-    15,  # L_Shoulder
-    16,  # L_Elbow
-    17,  # L_Wrist
 ]
 
 
@@ -69,20 +48,20 @@ class MyoLegsIm(MyoLegsTask):
         self.initial_pose = None
         self.previous_pose = None
         self.ref_motion_cache = EasyDict()
-        self.gender_betas = [np.zeros(17)]
 
         self.initialize_env_params(cfg)
         self.initialize_run_params(cfg)
 
         super().__init__(cfg)
-        
-        self.setup_motionlib()
-        self.load_initial_pose_data()
+
+        self.load_reference_data()
         self.setup_reference_model()
         self.initialize_biomechanical_recording()
         self.initialize_evaluation_metrics()
 
-        self.motions_to_remove = []
+        # Heading randomization state (per-episode)
+        self._randomize_heading = not self.test
+        self._heading_rot = None  # sRot or None
 
     def initialize_env_params(self, cfg: DictConfig) -> None:
         """
@@ -103,44 +82,62 @@ class MyoLegsIm(MyoLegsTask):
     def initialize_run_params(self, cfg: DictConfig) -> None:
         """
         Initializes run-specific parameters from the configuration.
-
-        Args:
-            cfg (DictConfig): Configuration object.
-
-        Sets:
-            - Various motion-related parameters (e.g., `motion_start_idx`, `motion_file`).
-            - Evaluation and testing flags (e.g., `im_eval`, `test`).
-            - Data recording and randomization flags.
         """
         self.motion_start_idx = cfg.run.motion_id
         self.im_eval = cfg.run.im_eval
         self.test = cfg.run.test
         self.num_motion_max = cfg.run.num_motions
-        self.motion_file = cfg.run.motion_file
         self.initial_pose_file = cfg.run.initial_pose_file
-        self.smpl_data_dir = cfg.run.smpl_data_dir
         self.random_sample = cfg.run.random_sample
         self.random_start = cfg.run.random_start
         self.recording_biomechanics = cfg.run.recording_biomechanics
 
-    def load_initial_pose_data(self) -> None:
+    def load_reference_data(self) -> None:
         """
-        Loads initial pose data from a specified file.
+        Loads pre-computed IK reference data produced by ``compute_ik.py``.
 
-        Checks for the existence of the file defined by `self.initial_pose_file` 
-        and loads it using `joblib`. If the file does not exist, initializes 
-        an empty dictionary and logs a warning.
+        Expected file format (new)::
+
+            {"frames": {motion_id: {time: qpos, ...}, ...},
+             "metadata": {motion_id: {"length", "dt", "fps", "num_frames"}, ...}}
+
+        Also supports the legacy format ``{motion_id: {time: qpos, ...}}``.
 
         Sets:
-            - `self.initial_pos_data`: Loaded pose data or an empty dictionary if the file is not found.
+            - ``self.initial_pos_data``  — frame lookup  {motion_id: {time: qpos}}
+            - ``self._motion_metadata``  — per-motion metadata dict
+            - ``self._all_motion_ids``   — sorted array of all motion IDs
+            - ``self._active_motion_ids``— currently active subset (set by sample_motions)
+            - ``self._num_total_motions``— total number of motions
         """
-        if os.path.exists(self.initial_pose_file):
-            self.initial_pos_data = joblib.load(
-                self.initial_pose_file
-            )
-        else:
-            logger.warning("!!! Initial pose data not found !!!")
+        if not os.path.exists(self.initial_pose_file):
+            logger.warning("!!! Reference data file not found: %s", self.initial_pose_file)
             self.initial_pos_data = {}
+            self._motion_metadata = {}
+            self._all_motion_ids = np.array([], dtype=int)
+            self._active_motion_ids = np.array([], dtype=int)
+            self._num_total_motions = 0
+            return
+
+        raw = joblib.load(self.initial_pose_file)
+
+        # Detect format
+        if isinstance(raw, dict) and "frames" in raw and "metadata" in raw:
+            self.initial_pos_data = raw["frames"]
+            self._motion_metadata = raw["metadata"]
+        else:
+            # Legacy format (flat dict of {motion_id: {time: qpos}})
+            self.initial_pos_data = raw
+            self._motion_metadata = {}
+
+        self._all_motion_ids = np.array(sorted(self.initial_pos_data.keys()), dtype=int)
+        self._num_total_motions = len(self._all_motion_ids)
+        self._active_motion_ids = self._all_motion_ids.copy()
+
+        logger.info(
+            "Loaded reference data: %d motions from %s",
+            self._num_total_motions, self.initial_pose_file,
+        )
 
     def setup_reference_model(self) -> None:
         """
@@ -273,79 +270,34 @@ class MyoLegsIm(MyoLegsTask):
             self.body_names.index(j) for j in self.reset_bodies
         ]
 
-    def setup_motionlib(self) -> None:
-        """
-        Sets up the motion library for managing SMPL motions.
-
-        Configures the motion library with parameters such as data directories, motion files, 
-        SMPL type, and randomization settings. Loads motions based on the current mode 
-        (test or training), applying shape parameters and optional motion subsets.
-
-        Sets:
-            - `self.motion_lib_cfg`: Configuration dictionary for motion library setup.
-            - `self.motion_lib`: Instance of `KinesisCore` initialized with the given config.
-            - `self._sampled_motion_id`: Array of sampled motion IDs (default: [0]).
-            - `self._motion_start_time`: Start times for the motions.
-        """
-        self.motion_lib_cfg = EasyDict(
-            {
-                "data_dir": self.smpl_data_dir,
-                "motion_file": self.motion_file,
-                "device": torch.device("cpu"),
-                "min_length": -1,
-                "max_length": -1,
-                "multi_thread": True if self.cfg.num_threads > 1 else False,
-                "smpl_type": "smpl",
-                "randomize_heading": not self.test,
-            }
-        )
-        self.motion_lib = KinesisCore(self.motion_lib_cfg)
-
-        # These are initial values that will be updated in reset
-        self._sampled_motion_id = 0
-        self._motion_start_time = 0
-        return
-
     def sample_motions(self) -> None:
         """
-        Samples motions in the motion library based on the current configuration.
-
-        Loads motions into the motion library `self.motion_lib` using the specified configuration, 
-        with options for random sampling, custom subsets, and shape parameters.
-
-        Notes:
-            - See `KinesisCore.load_motions` for more details on the loading process.
-            - The number of motions to load is determined by the length of the `shape_params` argument.
+        Selects the active subset of motion IDs for the current training period.
+        Called at init and periodically every ``resampling_interval`` epochs.
         """
-        self.motion_lib.load_motions(
-            self.motion_lib_cfg,
-            shape_params=self.gender_betas * min(self.num_motion_max, self.motion_lib.num_all_motions()),
-            random_sample=self.random_sample,
-            start_idx=self.motion_start_idx,
-        )
+        num_to_sample = min(self.num_motion_max, self._num_total_motions)
+        if self.random_sample:
+            self._active_motion_ids = np.random.choice(
+                self._all_motion_ids, size=num_to_sample, replace=False,
+            )
+        else:
+            start = self.motion_start_idx
+            indices = np.arange(start, start + num_to_sample) % self._num_total_motions
+            self._active_motion_ids = self._all_motion_ids[indices]
+
+        # Initial values (will be updated in reset)
+        self._sampled_motion_id = int(self._active_motion_ids[0])
+        self._motion_start_time = 0
 
     def forward_motions(self) -> Iterator[int]:
         """
-        Iterates through motions in the motion library.
-
-        Determines the range of motion IDs to process and sequentially loads each motion 
-        into the motion library. Yields the current motion start index during each iteration.
-
-        Yields:
-            int: The currently loaded motion index.
+        Iterates through *all* motions one-by-one (used during evaluation).
+        Yields the motion ID for each motion.
         """
-        motion_ids = range(self.motion_lib.num_all_motions())
-        for motion_start_idx in motion_ids:
-            self.motion_start_idx = motion_start_idx
-            self.motion_lib.load_motions(
-                self.motion_lib_cfg,
-                shape_params=self.gender_betas,
-                random_sample=self.random_sample,
-                silent=False,
-                start_idx=self.motion_start_idx,
-                specific_idxes=None,
-            )
-            yield motion_start_idx
+        for motion_id in self._all_motion_ids:
+            self._current_eval_motion_id = int(motion_id)
+            self._active_motion_ids = np.array([motion_id])
+            yield int(motion_id)
 
     def init_myolegs(self) -> None:
         """
@@ -366,58 +318,35 @@ class MyoLegsIm(MyoLegsTask):
 
     def initialize_motion_state(self) -> None:
         """
-        Retrieves motion data from the motion library and sets the initial pose.
+        Sets the simulation state (qpos / qvel) from pre-computed IK reference data,
+        applying the current episode heading.
         """
         super().init_myolegs()
-        motion_return = self.motion_lib.get_motion_state_intervaled(
-            self._sampled_motion_id,
-            self._motion_start_time,
-            offset=None
-        )
-        initial_rot = sRot.from_euler("XYZ", [-np.pi / 2, 0, -np.pi / 2])
-        ref_qpos = motion_return.qpos.flatten()
-        self.mj_data.qpos[:3] = ref_qpos[:3]
-        rotated_quat = (sRot.from_quat(ref_qpos[[4, 5, 6, 3]]) * initial_rot).as_quat()
-        self.mj_data.qpos[3:7] = np.roll(rotated_quat, 1)
 
-        if self.im_eval:
-            motion_id = self.motion_start_idx
+        motion_id = self._sampled_motion_id
+
+        # Look up stored IK solution for this frame
+        ref_qpos = self._lookup_reference_qpos(motion_id, self._motion_start_time)
+        headed_qpos = self._apply_heading(ref_qpos.copy())
+
+        self.mj_data.qpos[:len(headed_qpos)] = headed_qpos
+
+        # Velocity from finite differences of two neighbouring frames
+        if self._motion_start_time > 0:
+            prev_qpos = self._lookup_reference_qpos(
+                motion_id, self._motion_start_time - self.dt
+            )
+            prev_headed = self._apply_heading(prev_qpos.copy())
+            mujoco.mj_differentiatePos(
+                self.mj_model, self.mj_data.qvel, self.dt,
+                prev_headed, headed_qpos,
+            )
         else:
-            # All motions are cached, so we just need to start the index from self.motion_start_idx
-            motion_id = self._sampled_motion_id + self.motion_start_idx
+            self.mj_data.qvel[:] = 0
 
-        if motion_id in self.initial_pos_data:
-            # Load the initial pose from the initial_pos_data
-            if self.random_start:
-                self.initial_pose = self.initial_pos_data[motion_id][self._motion_start_time]
-            else:
-                self.initial_pose = self.initial_pos_data[motion_id][0]
-            if self.initial_pose is None:
-                breakpoint()
-            self.mj_data.qpos[7:] = self.initial_pose[7:]
-            mujoco.mj_kinematics(self.mj_model, self.mj_data)
-        elif self.initial_pose is not None:
-            # Constant initial pose
-            self.mj_data.qpos[:] = self.initial_pose
-            mujoco.mj_kinematics(self.mj_model, self.mj_data)
-        else:
-            # During IK, the humanoid sometimes reaches unfeasible positions. If that happens, we flag the motion and remove it from the dataset.
-            if self.mj_data.qpos[2] < 0.86 or self.mj_data.qpos[2] > 1:
-                if self.motion_lib._curr_motion_ids[0] not in self.motions_to_remove:
-                    self.motions_to_remove.append(self.motion_lib._curr_motion_ids[0])
-                    print(f"Motion {self.motions_to_remove[-1]} removed")
-            else:
-                # If the motion is flagged, just skip, otherwise compute the initial pose on the fly
-                if self.motion_lib._curr_motion_ids[0] not in self.motions_to_remove:
-                    self.compute_initial_pose()
+        # Zero out joint velocities — only root linear + angular are meaningful
+        self.mj_data.qvel[6:] = 0
 
-        # Set up velocity
-        ref_qvel = motion_return.qvel.flatten()[:6]
-        self.mj_data.qvel[:3] = ref_qvel[:3]
-        self.mj_data.qvel[3:6] = initial_rot.inv().apply(ref_qvel[3:6])
-        self.mj_data.qvel[6:] = np.zeros_like(self.mj_data.qvel[6:])
-
-        # Run kinematics
         mujoco.mj_kinematics(self.mj_model, self.mj_data)
 
     def reset_evaluation_metrics(self) -> None:
@@ -503,7 +432,7 @@ class MyoLegsIm(MyoLegsTask):
             use_mean=True if self.im_eval else False,
         )[0]
         truncated = (
-            sim_time > self.motion_lib.get_motion_length(self._sampled_motion_id)[0]
+            sim_time > self.get_motion_length(self._sampled_motion_id)
         )
 
         if terminated or truncated:
@@ -530,65 +459,47 @@ class MyoLegsIm(MyoLegsTask):
         """
         self.mpjpe_value = np.array(self.mpjpe).mean()
         if terminated:
-            self.frame_coverage = sim_time / self.motion_lib.get_motion_length(self._sampled_motion_id)[0]
+            self.frame_coverage = sim_time / self.get_motion_length(self._sampled_motion_id)
         else:
             self.frame_coverage = 1.0
 
     def reset_task(self, options: Optional[dict] = None) -> None:
         """
-        Resets the task to an initial state based on the current configuration.
-
-        This function initializes motion sampling and start times, considering the mode
-        (test or training), evaluation settings, and optional start time configurations.
-        Random starting times can also be applied if enabled.
-
-        Args:
-            options (dict, optional): A dictionary containing reset options. Supports:
-                - `start_time`: Specifies a custom start time for the motion.
-
-        Updates:
-            - `self._sampled_motion_id`: IDs of the motions to use after reset.
-            - `self._motion_start_time`: Start times for the motions, either specified, 
-            randomized, or set to zero.
-
-        Notes:
-            - If `self.random_start` is True, the start time is randomly selected from the
-            available time indices for which an initial pose is available.
+        Resets the task: picks a motion, generates heading, sets start time.
         """
-        if self.test:
-            if self.im_eval:
-                self._sampled_motion_id = 0  # options['motion_id']
-                self._motion_start_time = 0
-                if options is not None and "start_time" in options:
-                    self._motion_start_time = options["start_time"]
-            else:
-                self._sampled_motion_id = self.motion_lib.sample_motions(n=1)[0]
-                self._motion_start_time = 0
-                if options is not None and "start_time" in options:
-                    self._motion_start_time = options["start_time"]
-                elif self.random_start:
-                    motion_id = self.get_true_motion_id()
-                    start_time = np.random.choice(list(self.initial_pos_data[motion_id].keys()))
-                    self._motion_start_time = start_time
+        # ── Pick a motion ────────────────────────────────────────────────
+        if self.test and self.im_eval:
+            # Evaluation mode: use the motion set by forward_motions()
+            self._sampled_motion_id = getattr(
+                self, "_current_eval_motion_id", int(self._active_motion_ids[0])
+            )
         else:
-            self._sampled_motion_id = self.motion_lib.sample_motions(n=1)[0]
-            self._motion_start_time = 0
-            if options is not None and "start_time" in options:
-                self._motion_start_time = options["start_time"]
-            elif self.random_start:
-                motion_id = self.get_true_motion_id()
-                start_time = np.random.choice(list(self.initial_pos_data[motion_id].keys()))
-                self._motion_start_time = start_time
-    
-    def get_true_motion_id(self) -> int:
-        """
-        Calculates the true motion ID based on the current configuration.
+            # Training or test-run: sample from the active pool
+            self._sampled_motion_id = int(
+                np.random.choice(self._active_motion_ids)
+            )
 
-        Returns:
-            int: The true motion ID in the full motion library
-        """
-        motion_id = self._sampled_motion_id + self.motion_start_idx
-        return motion_id
+        # ── Start time ───────────────────────────────────────────────────
+        self._motion_start_time = 0
+        if options is not None and "start_time" in options:
+            self._motion_start_time = options["start_time"]
+        elif self.random_start:
+            motion_id = self._sampled_motion_id
+            if motion_id in self.initial_pos_data:
+                self._motion_start_time = np.random.choice(
+                    list(self.initial_pos_data[motion_id].keys())
+                )
+
+        # ── Heading randomization (per-episode) ─────────────────────────
+        if self._randomize_heading:
+            angle = np.random.uniform(-np.pi, np.pi)
+            self._heading_rot = sRot.from_euler("z", angle)
+        else:
+            self._heading_rot = None
+
+    def get_true_motion_id(self) -> int:
+        """Returns the global motion ID (same as ``_sampled_motion_id``)."""
+        return self._sampled_motion_id
 
     def _lookup_reference_qpos(self, motion_id: int, motion_time: float) -> Optional[np.ndarray]:
         """
@@ -626,24 +537,24 @@ class MyoLegsIm(MyoLegsTask):
 
     def _build_reference_state(self, motion_time: np.ndarray) -> Dict[str, np.ndarray]:
         """
-        Populates the reference Mujoco data buffer using motion library poses and returns the
-        derived body/muscle states.
+        Populates the reference Mujoco data buffer using pre-computed IK poses
+        (with heading applied) and returns derived body/muscle states.
         """
+        motion_id = self._sampled_motion_id
 
-        ref_qpos = self._lookup_reference_qpos(self._sampled_motion_id, motion_time)
-        prev_ref_qpos = self._lookup_reference_qpos(self._sampled_motion_id, motion_time - self.dt)
-        self.ref_data.qpos[: len(ref_qpos)] = ref_qpos
+        ref_qpos = self._lookup_reference_qpos(motion_id, motion_time)
+        headed = self._apply_heading(ref_qpos.copy())
+
+        self.ref_data.qpos[:len(headed)] = headed
         self.ref_data.qvel[:] = 0
 
-        motion_from_lib = self.motion_lib.get_motion_state_intervaled(
-            self._sampled_motion_id, motion_time, offset=None
-        )
-        qpos_from_lib = motion_from_lib.qpos.flatten()
-        self.ref_data.qpos[:3] = qpos_from_lib[:3]
-        initial_rot = sRot.from_euler("XYZ", [-np.pi / 2, 0, -np.pi / 2])
-        self.ref_data.qpos[3:7] = np.roll((sRot.from_quat(qpos_from_lib[[4, 5, 6, 3]]) * initial_rot).as_quat(), 1)
-
-        mujoco.mj_differentiatePos(self.mj_model, self.ref_data.qvel, self.dt, prev_ref_qpos, ref_qpos)
+        if motion_time > 0:
+            prev_ref_qpos = self._lookup_reference_qpos(motion_id, motion_time - self.dt)
+            prev_headed = self._apply_heading(prev_ref_qpos.copy())
+            mujoco.mj_differentiatePos(
+                self.mj_model, self.ref_data.qvel, self.dt,
+                prev_headed, headed,
+            )
         mujoco.mj_forward(self.mj_model, self.ref_data)
 
         return {
@@ -897,12 +808,9 @@ class MyoLegsIm(MyoLegsTask):
 
     def start_eval(self, im_eval=True):
         """
-        Prepares the environment for evaluation.
-
-        Args:
-            im_eval (bool): Whether to enable imitation evaluation mode. Defaults to True.
+        Prepares the environment for evaluation (no heading randomization).
         """
-        self.motion_lib_cfg.randomize_heading = False
+        self._randomize_heading = False
         self.im_eval = im_eval
         self.test = True
         self._temp_termination_distance = self.termination_distance
@@ -911,7 +819,7 @@ class MyoLegsIm(MyoLegsTask):
         """
         Concludes the evaluation process and restores training settings.
         """
-        self.motion_lib_cfg.randomize_heading = True
+        self._randomize_heading = True
         self.im_eval = False
         self.test = False
         self.termination_distance = self._temp_termination_distance
@@ -923,58 +831,43 @@ class MyoLegsIm(MyoLegsTask):
         """
         return self.mj_data.actuator_force
 
-    def compute_initial_pose(self, ref_dict: Optional[dict] = None) -> None:
+    # ──────────────────────────────────────────────────────────────────────
+    # Heading helpers
+    # ──────────────────────────────────────────────────────────────────────
+    def _apply_heading(self, qpos: np.ndarray) -> np.ndarray:
         """
-        Computes the initial pose by optimizing joint positions to minimize deviations from defaults 
-        while aligning the body positions with reference positions.
+        Applies the current episode heading rotation to the root pose (first 7 qpos).
+        Joint angles (qpos[7:]) are left unchanged.
 
-        Uses a constrained optimization method to determine the optimal joint configuration.
-
-        Args:
-            ref_dict (Optional[dict]): Reference motion data containing target positions. 
-                If None, reference data is retrieved from the motion library cache.
-
-        Notes:
-            - Joint bounds are derived from the Mujoco model's joint range.
+        If ``self._heading_rot`` is None (heading disabled), returns qpos unmodified.
         """
-        initial_qpos = self.mj_data.qpos.copy()
-        if ref_dict is None:
-            ref_dict = self.motion_lib.get_motion_state_intervaled(
-                self._sampled_motion_id,
-                self._motion_start_time,
-                offset=None
-            )
+        if self._heading_rot is None:
+            return qpos
 
-        ref_pos_subset = ref_dict.xpos[..., SMPL_TRACKED_IDS[1:], :]  # remove root
+        # Rotate translation (X, Y change; Z = height stays)
+        qpos[:3] = self._heading_rot.apply(qpos[:3])
 
-        joint_range = self.mj_model.jnt_range.copy()
-        bounds = joint_range[1:, :]
-        # make each row a 2-tuple
-        bounds = [tuple(b) for b in bounds]
+        # Compose heading with root quaternion (Mujoco wxyz format)
+        root_xyzw = qpos[np.array([4, 5, 6, 3])]              # wxyz → xyzw
+        new_xyzw = (
+            self._heading_rot * sRot.from_quat(root_xyzw)
+        ).as_quat()
+        qpos[3:7] = np.roll(new_xyzw, 1)                      # xyzw → wxyz
 
-        def distance_to_default(qpos):
-            mujoco.mj_kinematics(self.mj_model, self.mj_data)
-            return np.linalg.norm(qpos - initial_qpos[7:]) * 5
+        return qpos
 
-        def distance_to_ref(qpos):
-            self.mj_data.qpos[7:] = qpos
-            mujoco.mj_kinematics(self.mj_model, self.mj_data)
-            body_pos = self.get_body_xpos()[None,]
-            body_pos_subset = body_pos[..., self.track_bodies_id[1:], :]  # remove root
-            return np.linalg.norm(body_pos_subset - ref_pos_subset, axis=-1).sum()
-
-        out = scipy.optimize.fmin_slsqp(
-            func=distance_to_default,
-            # x0=self.mj_data.qpos[7:],
-            x0=self.previous_pose[7:] if self.previous_pose is not None else initial_qpos[7:],
-            eqcons=[distance_to_ref],
-            bounds=bounds,
-            iprint=1,
-            iter=200,
-            acc=0.02,
-        )
-
-        self.initial_pose = np.concatenate([initial_qpos[:7], out])
+    def get_motion_length(self, motion_id: int) -> float:
+        """
+        Returns the duration (seconds) of the given motion.
+        Falls back to counting frame keys if metadata is unavailable.
+        """
+        if motion_id in self._motion_metadata:
+            return self._motion_metadata[motion_id]["length"]
+        # Fallback: infer from stored frame times
+        if motion_id in self.initial_pos_data:
+            times = list(self.initial_pos_data[motion_id].keys())
+            return max(times) if times else 0.0
+        return 0.0
 
     def step(self, action):
         """
