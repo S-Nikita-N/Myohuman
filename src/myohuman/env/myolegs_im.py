@@ -41,10 +41,6 @@ MYOLEG_TRACKED_BODIES = [
     'lunate_l',   # Левое запястье
 ]
 
-# Height range for valid initial poses (root/pelvis Z-coordinate)
-_VALID_ROOT_HEIGHT = (0.86, 1.05)
-_MAX_START_RETRIES = 10
-
 
 class MyoLegsIm(MyoLegsTask):
 
@@ -82,6 +78,8 @@ class MyoLegsIm(MyoLegsTask):
         self.num_traj_samples = 1  # parameter for number of future time steps
         self.reward_specs = cfg.env.reward_specs
         self.termination_distance = cfg.env.termination_distance
+        self.valid_root_height = (0.86, 1.05)
+        self.max_start_retries = 10
 
     def initialize_run_params(self, cfg: DictConfig) -> None:
         """
@@ -505,9 +503,9 @@ class MyoLegsIm(MyoLegsTask):
         Falls back to time 0 if no valid frame is found after several retries.
         """
         available_times = list(self.initial_pos_data[motion_id].keys())
-        lo, hi = self._VALID_ROOT_HEIGHT
+        lo, hi = self.valid_root_height
 
-        for _ in range(self._MAX_START_RETRIES):
+        for _ in range(self.max_start_retries):
             t = np.random.choice(available_times)
             qpos = self._lookup_reference_qpos(motion_id, t)
             if qpos is not None and lo <= qpos[2] <= hi:

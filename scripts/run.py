@@ -109,11 +109,10 @@ if __name__ == "__main__":
 #     run.num_motions=500 \
 #     exp_name=macos_muscle_valid
 
-
-# python scripts/run.py \
+# poetry run python scripts/run.py \
 #     run.num_threads=10 \
 #     learning.min_batch_size=5200 \
 #     learning.mini_batch_size=5200 \
 #     learning.use_mini_batch=True \
 #     run.num_motions=500 \
-#     exp_name=macos_ik_train_exp1
+#     exp_name=test
