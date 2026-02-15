@@ -13,7 +13,7 @@ Prepare dataset from scratch
 3) Run the first part of `notebooks/dataset.ipynb` (keys selection steps).
 4) In repo root:
 ```bash
-poetry run python scripts/convert_kit.py
-poetry run python scripts/initial_pose.py
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 poetry run python scripts/compute_ik.py --split train --workers 9
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 poetry run python scripts/compute_ik.py --split test --workers 9
 ```
 5) Run the second part of `notebooks/dataset.ipynb` to finish processing.
