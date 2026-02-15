@@ -24,7 +24,7 @@ echo "Installing project dependencies..."
 poetry install
 
 echo "Installing chumpy (PEP517 isolation off)..."
-PIP_NO_BUILD_ISOLATION=1 poetry run pip install "chumpy==0.70"
+poetry run pip install --no-build-isolation "chumpy==0.70"
 
 echo "Patching chumpy for Python >=3.11 (getargspec -> getfullargspec)..."
 CH_FILE=$(

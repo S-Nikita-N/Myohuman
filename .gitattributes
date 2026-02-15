@@ -1,0 +1,2 @@
+data/inverse_kinematics/*.pkl filter=lfs diff=lfs merge=lfs -text
+data/smpl/*.pkl filter=lfs diff=lfs merge=lfs -text

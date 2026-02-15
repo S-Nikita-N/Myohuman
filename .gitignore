@@ -3,5 +3,5 @@
 models/
 data/KIT
 data/tmp/
+data/trained_models/
 wandb/
-data/

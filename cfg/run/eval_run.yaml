@@ -42,8 +42,6 @@ task_inputs:
 
 # File paths
 xml_path: "${project_root}/xml/myohuman.xml"
-motion_file: "${project_root}/data/dataset/kit_test_motion_dict.pkl"
-smpl_data_dir: "${project_root}/data/smpl"
 initial_pose_file: "${project_root}/data/inverse_kinematics/ik_test.pkl"
 
 # Extra analysis flags

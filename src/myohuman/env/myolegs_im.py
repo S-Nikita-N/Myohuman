@@ -41,6 +41,10 @@ MYOLEG_TRACKED_BODIES = [
     'lunate_l',   # Левое запястье
 ]
 
+# Height range for valid initial poses (root/pelvis Z-coordinate)
+_VALID_ROOT_HEIGHT = (0.86, 1.05)
+_MAX_START_RETRIES = 10
+
 
 class MyoLegsIm(MyoLegsTask):
 
@@ -486,9 +490,7 @@ class MyoLegsIm(MyoLegsTask):
         elif self.random_start:
             motion_id = self._sampled_motion_id
             if motion_id in self.initial_pos_data:
-                self._motion_start_time = np.random.choice(
-                    list(self.initial_pos_data[motion_id].keys())
-                )
+                self._motion_start_time = self._sample_valid_start_time(motion_id)
 
         # ── Heading randomization (per-episode) ─────────────────────────
         if self._randomize_heading:
@@ -496,6 +498,23 @@ class MyoLegsIm(MyoLegsTask):
             self._heading_rot = sRot.from_euler("z", angle)
         else:
             self._heading_rot = None
+
+    def _sample_valid_start_time(self, motion_id: int) -> float:
+        """
+        Randomly picks a start time whose IK root height is within the valid range.
+        Falls back to time 0 if no valid frame is found after several retries.
+        """
+        available_times = list(self.initial_pos_data[motion_id].keys())
+        lo, hi = self._VALID_ROOT_HEIGHT
+
+        for _ in range(self._MAX_START_RETRIES):
+            t = np.random.choice(available_times)
+            qpos = self._lookup_reference_qpos(motion_id, t)
+            if qpos is not None and lo <= qpos[2] <= hi:
+                return t
+
+        # Fallback: return time 0 (standing pose is almost always valid)
+        return 0
 
     def get_true_motion_id(self) -> int:
         """Returns the global motion ID (same as ``_sampled_motion_id``)."""

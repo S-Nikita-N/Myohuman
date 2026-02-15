@@ -13,7 +13,7 @@ Output format:
     }
 
 Usage:
-    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 python scripts/compute_ik.py --split train --workers 8
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 python scripts/compute_ik.py --split train --workers 9
 """
 
 import os
@@ -158,9 +158,6 @@ def load_npz_motion(data_path: str):
         [raw_poses, np.zeros((root_trans.shape[0], 6), dtype=np.float32)],
         axis=-1,
     )  # (N, 72)
-
-    if pose_aa.shape[0] < 10:
-        return None
 
     return pose_aa, root_trans, TARGET_FPS
 
@@ -308,7 +305,7 @@ def main():
     ordered_keys = [k for k in keys if k in key_to_path]
     motion_id_map = {mid: key for mid, key in enumerate(ordered_keys)}
 
-    # Load checkpoint
+    # Load checkpoint (keyed by motion key name for stability across key-file changes)
     ckpt_path.parent.mkdir(parents=True, exist_ok=True)
     if ckpt_path.exists():
         checkpoint = joblib.load(ckpt_path)
@@ -317,7 +314,7 @@ def main():
         checkpoint = {}
 
     remaining = [(mid, key) for mid, key in motion_id_map.items()
-                 if mid not in checkpoint]
+                 if key not in checkpoint]
     logger.info(f"{len(remaining)} motions remaining to process")
 
     # Process
@@ -340,12 +337,13 @@ def main():
 
             for future in tqdm(as_completed(futures), total=len(futures), desc="IK"):
                 mid = futures[future]
+                key = motion_id_map[mid]
                 result = future.result()
                 if result is not None:
-                    checkpoint[mid] = result
+                    checkpoint[key] = result
                     since_save += 1
                 else:
-                    logger.warning(f"Motion {mid} returned None (skipped)")
+                    logger.warning(f"Motion {mid} ({key}) returned None (skipped)")
 
                 if since_save >= CHECKPOINT_EVERY:
                     joblib.dump(checkpoint, ckpt_path)
@@ -355,11 +353,13 @@ def main():
         if since_save > 0:
             joblib.dump(checkpoint, ckpt_path)
 
-    # ── Assemble final output ────────────────────────────────────────────────
+    # ── Assemble final output (sequential integer IDs in key-file order) ────
     output = {"frames": {}, "metadata": {}}
-    for mid in sorted(checkpoint.keys()):
-        output["frames"][mid] = checkpoint[mid]["frames"]
-        output["metadata"][mid] = checkpoint[mid]["metadata"]
+    for mid in sorted(motion_id_map.keys()):
+        key = motion_id_map[mid]
+        if key in checkpoint:
+            output["frames"][mid] = checkpoint[key]["frames"]
+            output["metadata"][mid] = checkpoint[key]["metadata"]
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(output, output_path)
