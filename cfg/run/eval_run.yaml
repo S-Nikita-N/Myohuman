@@ -14,7 +14,7 @@ fast_forward: True
 
 # Motion configs
 motion_id: 0
-num_motions: 500
+num_motions: 565
 random_start: False
 
 # Motion selection flags
@@ -23,22 +23,21 @@ random_sample: False
 # Policy Observations
 proprioceptive_inputs: 
   - root_height
-  - root_tilt
   - local_body_pos
   - local_body_rot
   - local_body_vel
   - local_body_ang_vel
-  - muscle_len
-  - muscle_vel
-  - muscle_force
+  # - muscle_len
+  # - muscle_vel
+  # - muscle_force
   - feet_contacts
 
 task_inputs: 
   - diff_local_body_pos
   - diff_local_vel
   - local_ref_body_pos
-  - diff_muscle_len
-  - diff_muscle_vel
+  # - diff_muscle_len
+  # - diff_muscle_vel
 
 # File paths
 xml_path: "${project_root}/xml/myohuman.xml"
