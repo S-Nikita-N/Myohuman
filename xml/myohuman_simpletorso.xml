@@ -2,7 +2,7 @@
 <mujoco model="MyoSuite's MyoHuman Model">
 
     <include file="scene/myosuite_scene_noPedestal.xml"/>
-    <include file="assets/myotorso_assets.xml"/>
+    <include file="assets/myosimpletorso_assets.xml"/>
     <include file="assets/myohead_assets.xml"/>
     <include file="assets/myolegs_assets.xml"/>
     <include file="assets/myoarm_assets.xml"/>
@@ -10,16 +10,10 @@
     <sensor>
         <framelinvel name="root_vel" objtype="body" objname="root"/>
         <framelinvel name="sacrum_vel" objtype="body" objname="sacrum"/>
-        <framelinvel name="lumbar5_vel" objtype="body" objname="lumbar5"/>
-        <framelinvel name="Abdomen_vel" objtype="body" objname="Abdomen"/>
-        <framelinvel name="lumbar4_vel" objtype="body" objname="lumbar4"/>
-        <framelinvel name="lumbar3_vel" objtype="body" objname="lumbar3"/>
-        <framelinvel name="lumbar2_vel" objtype="body" objname="lumbar2"/>
-        <framelinvel name="lumbar1_vel" objtype="body" objname="lumbar1"/>
-        <framelinvel name="torso_vel" objtype="body" objname="torso"/>
+        <framelinvel name="lumbar_vel" objtype="body" objname="lumbar"/>
+        <framelinvel name="thoracic_vel" objtype="body" objname="thoracic"/>
         <framelinvel name="neck_vel" objtype="body" objname="neck"/>
         <framelinvel name="head_vel" objtype="body" objname="head"/>
-        <framelinvel name="thorax_vel" objtype="body" objname="thorax"/>
 
         <framelinvel name="clavicle_r_vel" objtype="body" objname="clavicle_r"/>
         <framelinvel name="clavphant_r_vel" objtype="body" objname="clavphant_r"/>
@@ -113,16 +107,10 @@
 
         <frameangvel name="root_angvel" objtype="body" objname="root"/>
         <frameangvel name="sacrum_angvel" objtype="body" objname="sacrum"/>
-        <frameangvel name="lumbar5_angvel" objtype="body" objname="lumbar5"/>
-        <frameangvel name="Abdomen_angvel" objtype="body" objname="Abdomen"/>
-        <frameangvel name="lumbar4_angvel" objtype="body" objname="lumbar4"/>
-        <frameangvel name="lumbar3_angvel" objtype="body" objname="lumbar3"/>
-        <frameangvel name="lumbar2_angvel" objtype="body" objname="lumbar2"/>
-        <frameangvel name="lumbar1_angvel" objtype="body" objname="lumbar1"/>
-        <frameangvel name="torso_angvel" objtype="body" objname="torso"/>
+        <frameangvel name="lumbar_angvel" objtype="body" objname="lumbar"/>
+        <frameangvel name="thoracic_angvel" objtype="body" objname="thoracic"/>
         <frameangvel name="neck_angvel" objtype="body" objname="neck"/>
         <frameangvel name="head_angvel" objtype="body" objname="head"/>
-        <frameangvel name="thorax_angvel" objtype="body" objname="thorax"/>
 
         <frameangvel name="clavicle_r_angvel" objtype="body" objname="clavicle_r"/>
         <frameangvel name="clavphant_r_angvel" objtype="body" objname="clavphant_r"/>
@@ -219,12 +207,12 @@
         <touch name="l_foot" site="l_foot_touch"/>
         <touch name="l_toes" site="l_toes_touch"/>
     </sensor>
-    
+
     <compiler angle="radian" meshdir=".." texturedir=".."/>
 
     <worldbody>
         <body name="root" pos="0 0 1">
-            <include file="assets/myotorso_chain.xml"/>
+            <include file="assets/myosimpletorso_chain.xml"/>
             <include file="assets/myolegs_chain.xml"/>
             <freejoint name = 'root'/>
         </body>
