@@ -23,6 +23,7 @@ random_sample: False
 # Policy Observations
 proprioceptive_inputs: 
   - root_height
+  - root_tilt
   - local_body_pos
   - local_body_rot
   - local_body_vel
