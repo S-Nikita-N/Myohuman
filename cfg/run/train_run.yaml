@@ -14,7 +14,7 @@ fast_forward: True
 
 # Motion configs
 motion_id: 0
-num_motions: 1916
+num_motions: 2258
 random_start: True
 
 # Motion selection flags

@@ -124,9 +124,6 @@ class MyoLegsEnv(BaseEnv):
 
         return tally
 
-    ######################################################
-    # WARNING: возможно придется менять (root_tilt)      #
-    ######################################################
     def compute_proprioception(self) -> np.ndarray:
         """
         Computes proprioceptive observations for the current simulation state.
