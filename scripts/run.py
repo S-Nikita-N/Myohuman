@@ -1,6 +1,12 @@
+import os
+
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 import logging
 import sys
-import os
 import torch
 import wandb
 import numpy as np
@@ -8,11 +14,6 @@ import torch.multiprocessing as mp
 
 from hydra import main as hydra_main
 from omegaconf import OmegaConf, DictConfig
-
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 from myohuman.agents.agent_im import AgentIM
 
