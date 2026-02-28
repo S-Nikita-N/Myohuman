@@ -87,7 +87,7 @@ class AgentIM(AgentHumanoid):
                         logger.info(f"Run {run_idx}: Success on attempt {attempt + 1}. MPJPE: {mpjpe * 1000:.5f}, Frame Coverage: {frame_coverage * 100:.5f}")
                     else:
                         success = False
-                        logger.info(f"Run {run_idx}: Failure on attempt {attempt + 1}. MPJPE: {mpjpe * 1000:.5f}, Frame Coverage: {frame_coverage[0] * 100:.5f}")
+                        logger.info(f"Run {run_idx}: Failure on attempt {attempt + 1}. MPJPE: {mpjpe * 1000:.5f}, Frame Coverage: {frame_coverage * 100:.5f}")
                     success_dict[run_idx] = success
                     mpjpe_dict[run_idx] = mpjpe
                     frame_coverage_dict[run_idx] = frame_coverage

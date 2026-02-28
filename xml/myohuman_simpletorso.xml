@@ -14,6 +14,7 @@
         <framelinvel name="thoracic_vel" objtype="body" objname="thoracic"/>
         <framelinvel name="neck_vel" objtype="body" objname="neck"/>
         <framelinvel name="head_vel" objtype="body" objname="head"/>
+        <framelinvel name="thorax_vel" objtype="body" objname="thorax"/>
 
         <framelinvel name="clavicle_r_vel" objtype="body" objname="clavicle_r"/>
         <framelinvel name="clavphant_r_vel" objtype="body" objname="clavphant_r"/>
@@ -111,6 +112,7 @@
         <frameangvel name="thoracic_angvel" objtype="body" objname="thoracic"/>
         <frameangvel name="neck_angvel" objtype="body" objname="neck"/>
         <frameangvel name="head_angvel" objtype="body" objname="head"/>
+        <frameangvel name="thorax_angvel" objtype="body" objname="thorax"/>
 
         <frameangvel name="clavicle_r_angvel" objtype="body" objname="clavicle_r"/>
         <frameangvel name="clavphant_r_angvel" objtype="body" objname="clavphant_r"/>
