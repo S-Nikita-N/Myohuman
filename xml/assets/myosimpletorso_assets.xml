@@ -35,6 +35,7 @@
         <mesh file="../meshes/hat_lumbar.stl" name="hat_lumbar"/>
         <mesh file="../meshes/hat_thoracic.stl" name="hat_thoracic"/>
         <mesh file="../meshes/hat_ribs_scap.stl" name="hat_ribs"/>
+    </asset>
 
     <tendon>
         <spatial name="ercspn_r_tendon" class="myotorso">
