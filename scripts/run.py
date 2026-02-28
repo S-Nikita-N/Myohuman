@@ -103,11 +103,12 @@ if __name__ == "__main__":
 #     exp_name=vastai_baseline_exp3
 
 # poetry run mjpython scripts/run.py \
+#     --config-name=eval_config \
 #     run.num_threads=1 \
-#     run.headless=False
-#     learning.min_batch_size=500 \
-#     run.num_motions=500 \
-#     exp_name=macos_muscle_valid
+#     run.headless=False \
+#     exp_name=macos_muscle_valid \
+#     run.xml_path=/Users/nikita/Projects/diploma/arnold/src/arnold/experts/Myohuman/xml/myohuman_simpletorso.xml \
+#     run.initial_pose_file=/Users/nikita/Projects/diploma/arnold/src/arnold/experts/Myohuman/data/inverse_kinematics/ik_test_simpletorso.pkl
 
 # poetry run python scripts/run.py \
 #     run.num_threads=10 \
