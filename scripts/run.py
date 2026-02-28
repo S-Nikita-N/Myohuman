@@ -1,5 +1,6 @@
 import logging
 import sys
+import os
 import torch
 import wandb
 import numpy as np
@@ -16,6 +17,11 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
+
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 
 def setup_reproducibility(cfg: DictConfig):
