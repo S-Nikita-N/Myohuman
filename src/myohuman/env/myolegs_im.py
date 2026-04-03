@@ -196,7 +196,7 @@ class MyoLegsIm(MyoLegsTask):
         Capsules are color-coded for differentiation, with red and blue indicating different roles.
         """
         if self.viewer is not None:  # this implies that headless == False
-            for _ in range(len(self.track_bodies)):
+            for _ in range(len(self.tracked_bodies)):
                 add_visual_capsule(
                     self.viewer.user_scn,
                     np.zeros(3),
@@ -213,7 +213,7 @@ class MyoLegsIm(MyoLegsTask):
                 )
 
         if self.renderer is not None:
-            for _ in range(len(self.track_bodies)):
+            for _ in range(len(self.tracked_bodies)):
                 add_visual_capsule(
                     self.viewer.user_scn,
                     np.zeros(3),
@@ -233,12 +233,12 @@ class MyoLegsIm(MyoLegsTask):
             ref_dict = self.get_state_from_motionlib_cache(
                 (self.cur_t) * self.dt + self._motion_start_time
             )
-            ref_pos_subset = ref_dict.xpos[..., self.track_bodies_id, :]
+            ref_pos_subset = ref_dict.xpos[..., self.tracked_bodies_id, :]
 
-            for i in range(len(self.track_bodies)):
+            for i in range(len(self.tracked_bodies)):
                 scene.geoms[2 * i].pos = ref_pos_subset[0, i]
                 scene.geoms[2 * i + 1].pos = self.get_body_xpos()[
-                    self.track_bodies_id[i]
+                    self.tracked_bodies_id[i]
                 ]
 
         if self.viewer is not None:
@@ -254,19 +254,19 @@ class MyoLegsIm(MyoLegsTask):
         corresponding indices based on the original body names.
 
         Sets:
-            - `self.full_track_bodies`: List of all original body names.
-            - `self.track_bodies`: Names of tracked bodies specific to MyoLeg.
+            - `self.full_tracked_bodies`: List of all original body names.
+            - `self.tracked_bodies`: Names of tracked bodies specific to MyoLeg.
             - `self.reset_bodies`: Names of bodies to reset.
-            - `self.track_bodies_id`: Indices of tracked bodies in `self.body_names`.
+            - `self.tracked_bodies_id`: Indices of tracked bodies in `self.body_names`.
             - `self.reset_bodies_id`: Indices of reset bodies in `self.body_names`.
         """
         super().setup_myolegs_params()
-        self.full_track_bodies = self.body_names
-        self.track_bodies = MYOLEG_TRACKED_BODIES
-        self.reset_bodies = self.track_bodies
+        self.full_tracked_bodies = self.body_names
+        self.tracked_bodies = MYOLEG_TRACKED_BODIES
+        self.reset_bodies = self.tracked_bodies
         
-        self.track_bodies_id = [
-            self.body_names.index(j) for j in self.track_bodies
+        self.tracked_bodies_id = [
+            self.body_names.index(j) for j in self.tracked_bodies
         ]
         self.reset_bodies_id = [
             self.body_names.index(j) for j in self.reset_bodies
@@ -366,11 +366,11 @@ class MyoLegsIm(MyoLegsTask):
         self.joint_pos.append(np.full(self.get_qpos().shape, np.nan))
         self.joint_vel.append(np.full(self.get_qvel().shape, np.nan))
         self.body_pos.append(np.full(self.get_body_xpos()[None,].shape, np.nan))
-        self.body_rot.append(np.full(self.get_body_xquat()[None,][..., self.track_bodies_id, :].shape, np.nan))
-        self.body_vel.append(np.full(self.get_body_linear_vel()[None,][..., self.track_bodies_id, :].shape, np.nan))
-        self.ref_pos.append(np.full(self.get_body_xpos()[None,][..., self.track_bodies_id, :].shape, np.nan))
-        self.ref_rot.append(np.full(self.get_body_xquat()[None,][..., self.track_bodies_id, :].shape, np.nan))
-        self.ref_vel.append(np.full(self.get_body_linear_vel()[None,][..., self.track_bodies_id, :].shape, np.nan))
+        self.body_rot.append(np.full(self.get_body_xquat()[None,][..., self.tracked_bodies_id, :].shape, np.nan))
+        self.body_vel.append(np.full(self.get_body_linear_vel()[None,][..., self.tracked_bodies_id, :].shape, np.nan))
+        self.ref_pos.append(np.full(self.get_body_xpos()[None,][..., self.tracked_bodies_id, :].shape, np.nan))
+        self.ref_rot.append(np.full(self.get_body_xquat()[None,][..., self.tracked_bodies_id, :].shape, np.nan))
+        self.ref_vel.append(np.full(self.get_body_linear_vel()[None,][..., self.tracked_bodies_id, :].shape, np.nan))
         self.motion_id.append(np.nan)
         self.muscle_forces.append(np.full(self.get_muscle_force().shape, np.nan))
         self.muscle_controls.append(np.full(self.mj_data.ctrl.shape, np.nan))
@@ -390,11 +390,11 @@ class MyoLegsIm(MyoLegsTask):
         inputs = self.cfg.run.task_inputs
         obs_size = 0
         if "diff_local_body_pos" in inputs:
-            obs_size += 3 * len(self.track_bodies)
+            obs_size += 3 * len(self.tracked_bodies)
         if "diff_local_vel" in inputs:
-            obs_size += 3 * len(self.track_bodies)
+            obs_size += 3 * len(self.tracked_bodies)
         if "local_ref_body_pos" in inputs:
-            obs_size += 3 * len(self.track_bodies)
+            obs_size += 3 * len(self.tracked_bodies)
         if "diff_muscle_len" in inputs:
             obs_size += self.mj_model.nu
         if "diff_muscle_vel" in inputs:
@@ -620,13 +620,13 @@ class MyoLegsIm(MyoLegsTask):
 
         root_rot = body_rot[:, 0]
         root_pos = body_pos[:, 0]
-        body_pos_subset = body_pos[..., self.track_bodies_id, :]
-        body_rot_subset = body_rot[..., self.track_bodies_id, :]
-        body_vel_subset = body_vel[..., self.track_bodies_id, :]
+        body_pos_subset = body_pos[..., self.tracked_bodies_id, :]
+        body_rot_subset = body_rot[..., self.tracked_bodies_id, :]
+        body_vel_subset = body_vel[..., self.tracked_bodies_id, :]
 
-        ref_pos_subset = ref_dict.xpos[None,][..., self.track_bodies_id, :]
-        ref_rot_subset = ref_dict.xquat[None,][..., self.track_bodies_id, :]
-        ref_body_vel_subset = ref_dict.body_vel[None,][..., self.track_bodies_id, :]
+        ref_pos_subset = ref_dict.xpos[None,][..., self.tracked_bodies_id, :]
+        ref_rot_subset = ref_dict.xquat[None,][..., self.tracked_bodies_id, :]
+        ref_body_vel_subset = ref_dict.body_vel[None,][..., self.tracked_bodies_id, :]
         ref_muscle_len = ref_dict.actuator_length
         ref_muscle_vel = ref_dict.actuator_velocity
 
@@ -775,12 +775,12 @@ class MyoLegsIm(MyoLegsTask):
 
         body_pos = self.get_body_xpos()[None,]
 
-        body_pos_subset = body_pos[..., self.track_bodies_id, :]
-        ref_pos_subset = ref_dict.xpos[..., self.track_bodies_id, :]
+        body_pos_subset = body_pos[..., self.tracked_bodies_id, :]
+        ref_pos_subset = ref_dict.xpos[..., self.tracked_bodies_id, :]
 
         body_vel = self.get_body_linear_vel()[None,]
-        body_vel_subset = body_vel[..., self.track_bodies_id, :]
-        ref_body_vel_subset = ref_dict.body_vel[..., self.track_bodies_id, :]
+        body_vel_subset = body_vel[..., self.tracked_bodies_id, :]
+        ref_body_vel_subset = ref_dict.body_vel[..., self.tracked_bodies_id, :]
 
         reward, reward_raw = compute_imitation_reward(
             body_pos_subset,
