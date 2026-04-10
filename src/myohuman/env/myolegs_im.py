@@ -355,8 +355,7 @@ class MyoLegsIm(MyoLegsTask):
         """
         Resets evaluation metrics for motion imitation performance.
         """
-        self.mjpe = []
-        self.mjve = []
+        self.mpjpe = []
 
     def delineate_biomechanical_recording(self) -> None:
         """
@@ -464,6 +463,8 @@ class MyoLegsIm(MyoLegsTask):
             self.frame_coverage = sim_time / self.get_motion_length(self._sampled_motion_id)
         else:
             self.frame_coverage = 1.0
+        # Kinesis-style: success = episode did not early-terminate (completed or got truncated)
+        self.last_success = not terminated
 
     def reset_task(self, options: Optional[dict] = None) -> None:
         """
@@ -885,6 +886,19 @@ class MyoLegsIm(MyoLegsTask):
             times = list(self.initial_pos_data[motion_id].keys())
             return max(times) if times else 0.0
         return 0.0
+
+    def post_physics_step(self, action):
+        """
+        Adds imitation-eval metrics (mpjpe, frame_coverage, success) to info
+        on the terminal step. Metrics are computed inside compute_reset() and
+        remain on self until this point.
+        """
+        obs, reward, terminated, truncated, info = super().post_physics_step(action)
+        if terminated or truncated:
+            info["mpjpe"] = float(self.mpjpe_value)
+            info["frame_coverage"] = float(self.frame_coverage)
+            info["success"] = bool(self.last_success)
+        return obs, reward, terminated, truncated, info
 
     def step(self, action):
         """
