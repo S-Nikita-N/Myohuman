@@ -93,6 +93,7 @@ class MyoLegsIm(MyoLegsTask):
         self.random_sample = cfg.run.random_sample
         self.random_start = cfg.run.random_start
         self.recording_biomechanics = cfg.run.recording_biomechanics
+        self.motion_ids_file = cfg.run.motion_ids_file
 
     def load_reference_data(self) -> None:
         """
@@ -132,7 +133,33 @@ class MyoLegsIm(MyoLegsTask):
             self.initial_pos_data = raw
             self._motion_metadata = {}
 
-        self._all_motion_ids = np.array(sorted(self.initial_pos_data.keys()), dtype=int)
+        all_ids = set(self.initial_pos_data.keys())
+
+        # Filter by motion_ids_file (plain txt, one integer motion_id per line)
+        if self.motion_ids_file:
+            if not os.path.exists(self.motion_ids_file):
+                raise FileNotFoundError(
+                    f"motion_ids_file not found: {self.motion_ids_file}"
+                )
+            with open(self.motion_ids_file, "r") as f:
+                file_ids = {
+                    int(line.strip()) for line in f
+                    if line.strip() and not line.startswith("#")
+                }
+            n_before = len(all_ids)
+            dropped = file_ids - all_ids
+            if dropped:
+                logger.warning(
+                    "motion_ids_file: %d IDs not found in reference data (skipped)",
+                    len(dropped),
+                )
+            all_ids = all_ids & file_ids
+            logger.info(
+                "Filtered by motion_ids_file: %d → %d motions (%s)",
+                n_before, len(all_ids), self.motion_ids_file,
+            )
+
+        self._all_motion_ids = np.array(sorted(all_ids), dtype=int)
         self._num_total_motions = len(self._all_motion_ids)
         self._active_motion_ids = self._all_motion_ids.copy()
 
@@ -458,7 +485,9 @@ class MyoLegsIm(MyoLegsTask):
             - `self.mpjpe_value`: Average MPJPE across all frames.
             - `self.frame_coverage`: Ratio of completed frames to total motion length.
         """
-        self.mpjpe_value = np.array(self.mpjpe).mean()
+        mpjpe_arr = np.array(self.mpjpe)
+        self.mpjpe_value = mpjpe_arr.mean()
+        self.max_mpjpe_value = mpjpe_arr.max() if len(mpjpe_arr) > 0 else 0.0
         if terminated:
             self.frame_coverage = sim_time / self.get_motion_length(self._sampled_motion_id)
         else:
@@ -896,6 +925,7 @@ class MyoLegsIm(MyoLegsTask):
         obs, reward, terminated, truncated, info = super().post_physics_step(action)
         if terminated or truncated:
             info["mpjpe"] = float(self.mpjpe_value)
+            info["max_mpjpe"] = float(self.max_mpjpe_value)
             info["frame_coverage"] = float(self.frame_coverage)
             info["success"] = bool(self.last_success)
         return obs, reward, terminated, truncated, info

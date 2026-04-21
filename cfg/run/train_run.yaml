@@ -19,6 +19,7 @@ random_start: True
 
 # Motion selection flags
 random_sample: False
+motion_ids_file: null  # path to JSON from mine_negatives.py — loads only these motion IDs
 
 # Policy Observations
 proprioceptive_inputs:
