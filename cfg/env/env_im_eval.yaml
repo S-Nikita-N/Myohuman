@@ -10,9 +10,9 @@ kp_scale: 1.0
 kd_scale: 1.0
 clip_actions: True
 reward_specs:
-  "k_pos": 500
-  "k_vel": 1
-  "k_energy": 0.005
+  "k_pos": 200
+  "k_vel": 5
+  "k_energy": 0.05
   "k_muscle_len": 2000
   "k_muscle_vel": 20
   
