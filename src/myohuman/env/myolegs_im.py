@@ -858,6 +858,8 @@ class MyoLegsIm(MyoLegsTask):
         Prepares the environment for evaluation (no heading randomization).
         """
         self._randomize_heading = False
+        self._temp_random_start = self.random_start
+        self.random_start = False
         self.im_eval = im_eval
         self.test = True
         self._temp_termination_distance = self.termination_distance
@@ -867,6 +869,7 @@ class MyoLegsIm(MyoLegsTask):
         Concludes the evaluation process and restores training settings.
         """
         self._randomize_heading = True
+        self.random_start = self._temp_random_start
         self.im_eval = False
         self.test = False
         self.termination_distance = self._temp_termination_distance
