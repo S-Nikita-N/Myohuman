@@ -306,6 +306,23 @@ class MyoLegsIm(MyoLegsTask):
         else:
             self.body_reward_weights = None
 
+        raw_term = self.cfg.env.get("body_termination_distance", None)
+        if raw_term is not None:
+            arr = np.full(len(self.reset_bodies), self.termination_distance, dtype=np.float64)
+            for name, dist in raw_term.items():
+                assert name in self.reset_bodies, (
+                    f"body_termination_distance: unknown body '{name}'. "
+                    f"Valid: {self.reset_bodies}"
+                )
+                arr[self.reset_bodies.index(name)] = float(dist)
+            self.per_body_termination_distance = arr
+            logger.info(
+                "Per-body termination distances: %s",
+                {b: f"{d:.3f}" for b, d in zip(self.reset_bodies, arr)},
+            )
+        else:
+            self.per_body_termination_distance = None
+
         self.reset_bodies_id = [
             self.body_names.index(j) for j in self.reset_bodies
         ]
@@ -480,10 +497,15 @@ class MyoLegsIm(MyoLegsTask):
         body_pos = self.get_body_xpos()[None,]
         body_pos_subset = body_pos[..., self.reset_bodies_id, :]
         ref_pos_subset = ref_dict.xpos[..., self.reset_bodies_id, :]
+        term_dist = (
+            self.per_body_termination_distance
+            if self.per_body_termination_distance is not None
+            else self.termination_distance
+        )
         terminated = compute_humanoid_im_reset(
             body_pos_subset,
             ref_pos_subset,
-            termination_distance=self.termination_distance,
+            termination_distance=term_dist,
             use_mean=True if self.im_eval else False,
         )[0]
         truncated = (
@@ -1151,29 +1173,28 @@ def compute_humanoid_im_reset(
     Args:
         rigid_body_pos (np.ndarray): Current positions of the humanoid's rigid bodies.
         ref_body_pos (np.ndarray): Reference positions of the humanoid's rigid bodies.
-        termination_distance (float): Threshold distance for termination.
+        termination_distance (float or np.ndarray): Threshold distance for termination.
+            If ndarray, per-body thresholds with shape (num_bodies,).
         use_mean (bool): Whether to use the mean or maximum deviation for the reset condition.
 
     Returns:
         bool: Indicates whether the humanoid has exceeded the termination distance.
     """
+    per_body_dist = np.linalg.norm(rigid_body_pos - ref_body_pos, axis=-1)
+
     if use_mean:
         has_fallen = np.any(
-            np.linalg.norm(rigid_body_pos - ref_body_pos, axis=-1).mean(
-                axis=-1, keepdims=True
-            )
-            > termination_distance,
+            per_body_dist.mean(axis=-1, keepdims=True) > (
+                np.mean(termination_distance) if isinstance(termination_distance, np.ndarray)
+                else termination_distance
+            ),
             axis=-1,
         )
     else:
-        # print('------------')
-        # dist = np.linalg.norm(rigid_body_pos - ref_body_pos, axis=-1)
-        # for i, dist_i in enumerate(dist[0]):
-        #     print(i, dist_i)
-
+        # per_body_dist shape: (batch, num_bodies)
+        # termination_distance: scalar or (num_bodies,) — broadcasts naturally
         has_fallen = np.any(
-            np.linalg.norm(rigid_body_pos - ref_body_pos, axis=-1)
-            > termination_distance,
+            per_body_dist > termination_distance,
             axis=-1,
         )
 

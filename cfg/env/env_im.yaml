@@ -26,6 +26,12 @@ reward_specs:
 resampling_interval: 100
 termination_distance: 0.15
 
+# Per-body termination distances (dict: body_name → threshold).
+# Bodies not listed use the global termination_distance.
+# null = global threshold for all bodies.
+# Example: {humerus_r: 0.3, humerus_l: 0.3, radius_r: 0.3, radius_l: 0.3, lunate_r: 0.3, lunate_l: 0.3}
+body_termination_distance: null
+
 # Per-body reward weights for tracked bodies (same order as MYOLEG_TRACKED_BODIES).
 # null = equal weights (1.0 for all).
 body_reward_weights: null
