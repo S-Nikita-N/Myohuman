@@ -298,11 +298,24 @@ class MyoLegsIm(MyoLegsTask):
 
         raw_weights = self.cfg.env.get("body_reward_weights", None)
         if raw_weights is not None:
-            w = np.array(raw_weights, dtype=np.float64)
-            assert len(w) == len(self.tracked_bodies), (
-                f"body_reward_weights length {len(w)} != tracked_bodies {len(self.tracked_bodies)}"
-            )
+            if isinstance(raw_weights, dict):
+                w = np.ones(len(self.tracked_bodies), dtype=np.float64)
+                for name, val in raw_weights.items():
+                    assert name in self.tracked_bodies, (
+                        f"body_reward_weights: unknown body '{name}'. "
+                        f"Valid: {self.tracked_bodies}"
+                    )
+                    w[self.tracked_bodies.index(name)] = float(val)
+            else:
+                w = np.array(raw_weights, dtype=np.float64)
+                assert len(w) == len(self.tracked_bodies), (
+                    f"body_reward_weights length {len(w)} != tracked_bodies {len(self.tracked_bodies)}"
+                )
             self.body_reward_weights = w / w.sum()
+            logger.info(
+                "Per-body reward weights: %s",
+                {b: f"{v:.3f}" for b, v in zip(self.tracked_bodies, self.body_reward_weights)},
+            )
         else:
             self.body_reward_weights = None
 
