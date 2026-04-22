@@ -298,7 +298,7 @@ class MyoLegsIm(MyoLegsTask):
 
         raw_weights = self.cfg.env.get("body_reward_weights", None)
         if raw_weights is not None:
-            if isinstance(raw_weights, dict):
+            if hasattr(raw_weights, 'items'):
                 w = np.ones(len(self.tracked_bodies), dtype=np.float64)
                 for name, val in raw_weights.items():
                     assert name in self.tracked_bodies, (
