@@ -389,6 +389,22 @@ class MyoLegsIm(MyoLegsTask):
 
         mujoco.mj_kinematics(self.mj_model, self.mj_data)
 
+    def get_termination_stats(self) -> Dict[str, dict]:
+        """Returns per-body termination stats (count + mean dist) and resets."""
+        counts = getattr(self, "_termination_counts", {})
+        dists = getattr(self, "_termination_dists", {})
+        stats = {}
+        for b in self.reset_bodies:
+            c = counts.get(b, 0)
+            d = dists.get(b, [])
+            stats[b] = {
+                "caused": c,
+                "mean_dist": float(np.mean(d)) if d else 0.0,
+            }
+        self._termination_counts = {b: 0 for b in self.reset_bodies}
+        self._termination_dists = {b: [] for b in self.reset_bodies}
+        return stats
+
     def reset_evaluation_metrics(self) -> None:
         """
         Resets evaluation metrics for motion imitation performance.
@@ -473,6 +489,20 @@ class MyoLegsIm(MyoLegsTask):
         truncated = (
             sim_time > self.get_motion_length(self._sampled_motion_id)
         )
+
+        if terminated:
+            per_body_dist = np.linalg.norm(
+                body_pos_subset[0] - ref_pos_subset[0], axis=-1
+            )
+            worst_idx = int(per_body_dist.argmax())
+            self.last_termination_body = self.reset_bodies[worst_idx]
+            self.last_termination_dist = per_body_dist
+            if not hasattr(self, "_termination_counts"):
+                self._termination_counts = {b: 0 for b in self.reset_bodies}
+                self._termination_dists = {b: [] for b in self.reset_bodies}
+            self._termination_counts[self.reset_bodies[worst_idx]] += 1
+            for i, b in enumerate(self.reset_bodies):
+                self._termination_dists[b].append(float(per_body_dist[i]))
 
         if terminated or truncated:
             self.compute_evaluation_metrics(terminated, sim_time)
@@ -943,6 +973,11 @@ class MyoLegsIm(MyoLegsTask):
             info["max_mpjpe"] = float(self.max_mpjpe_value)
             info["frame_coverage"] = float(self.frame_coverage)
             info["success"] = bool(self.last_success)
+        if terminated and hasattr(self, "last_termination_body"):
+            info["termination_body"] = self.last_termination_body
+            info["termination_dists"] = {
+                b: float(d) for b, d in zip(self.reset_bodies, self.last_termination_dist)
+            }
         return obs, reward, terminated, truncated, info
 
     def step(self, action):
