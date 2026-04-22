@@ -295,6 +295,17 @@ class MyoLegsIm(MyoLegsTask):
         self.tracked_bodies_id = [
             self.body_names.index(j) for j in self.tracked_bodies
         ]
+
+        raw_weights = self.cfg.env.get("body_reward_weights", None)
+        if raw_weights is not None:
+            w = np.array(raw_weights, dtype=np.float64)
+            assert len(w) == len(self.tracked_bodies), (
+                f"body_reward_weights length {len(w)} != tracked_bodies {len(self.tracked_bodies)}"
+            )
+            self.body_reward_weights = w / w.sum()
+        else:
+            self.body_reward_weights = None
+
         self.reset_bodies_id = [
             self.body_names.index(j) for j in self.reset_bodies
         ]
@@ -818,6 +829,7 @@ class MyoLegsIm(MyoLegsTask):
             ref_pos_subset,
             ref_body_vel_subset,
             self.reward_specs,
+            body_weights=self.body_reward_weights,
         )
 
         energy_reward = np.mean(self.curr_power_usage)
@@ -1041,9 +1053,10 @@ def compute_imitation_reward(
     ref_body_pos: np.ndarray,
     ref_body_vel: np.ndarray,
     rwd_specs: dict,
+    body_weights: Optional[np.ndarray] = None,
 ) -> Tuple[float, Dict[str, np.ndarray]]:
     """
-    Computes the imitation reward based on differences in positions and velocities 
+    Computes the imitation reward based on differences in positions and velocities
     between the current and reference states.
 
     Args:
@@ -1056,25 +1069,33 @@ def compute_imitation_reward(
             - `"k_vel"`: Scaling factor for velocity reward.
             - `"w_pos"`: Weight for position reward.
             - `"w_vel"`: Weight for velocity reward.
+        body_weights (Optional[np.ndarray]): Per-body weights, shape (num_bodies,),
+            must sum to 1. None = uniform mean (original behavior).
 
     Returns:
         Tuple:
             - reward (float): Weighted sum of position and velocity rewards.
-            - reward_raw (Dict[str, np.ndarray]): Dictionary of raw reward components:
-                - `"r_body_pos"`: Body position reward.
-                - `"r_vel"`: Velocity reward.
+            - reward_raw (Dict[str, np.ndarray]): Dictionary of raw reward components.
     """
     k_pos, k_vel = rwd_specs["k_pos"], rwd_specs["k_vel"]
     w_pos, w_vel = rwd_specs["w_pos"], rwd_specs["w_vel"]
 
-    # body position reward
+    # body position reward — per-body squared error, then (weighted) mean over bodies
     diff_global_body_pos = ref_body_pos - body_pos
-    diff_body_pos_dist = (diff_global_body_pos**2).mean(axis=-1).mean(axis=-1)
+    per_body_pos_err = (diff_global_body_pos**2).mean(axis=-1)  # (..., num_bodies)
+    if body_weights is not None:
+        diff_body_pos_dist = (per_body_pos_err * body_weights).sum(axis=-1)
+    else:
+        diff_body_pos_dist = per_body_pos_err.mean(axis=-1)
     r_body_pos = np.exp(-k_pos * diff_body_pos_dist)
 
     # body linear velocity reward
     diff_global_vel = ref_body_vel - body_vel
-    diff_global_vel_dist = (diff_global_vel**2).mean(axis=-1).mean(axis=-1)
+    per_body_vel_err = (diff_global_vel**2).mean(axis=-1)
+    if body_weights is not None:
+        diff_global_vel_dist = (per_body_vel_err * body_weights).sum(axis=-1)
+    else:
+        diff_global_vel_dist = per_body_vel_err.mean(axis=-1)
     r_vel = np.exp(-k_vel * diff_global_vel_dist)
 
     reward = w_pos * r_body_pos + w_vel * r_vel

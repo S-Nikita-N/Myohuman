@@ -25,3 +25,7 @@ reward_specs:
 #### Task Configs
 resampling_interval: 100
 termination_distance: 0.15
+
+# Per-body reward weights for tracked bodies (same order as MYOLEG_TRACKED_BODIES).
+# null = equal weights (1.0 for all).
+body_reward_weights: null
