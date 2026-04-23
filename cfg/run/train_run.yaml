@@ -2,7 +2,7 @@
 num_threads: 1
 
 # Policy mode
-control_mode: "PD"
+control_mode: "direct"
 
 # Train-test flags
 im_eval: False
