@@ -55,16 +55,25 @@ class MyoLegsEnv(BaseEnv):
         for i in range(self.mj_model.nbody):
             body_name = self.mj_model.body(i).name
             self.mj_body_names.append(body_name)
-        
-        self.body_names = self.mj_body_names[1:]  # the first one is always world
-            
+
+        # Build observed body list from linvel sensors in the model.
+        # This allows XML to control which bodies appear in observations
+        # (e.g. excluding finger bodies when include_finger_sensors=false).
+        sensor_body_names = []
+        for i in range(self.mj_model.nsensor):
+            s = self.mj_model.sensor(i)
+            if s.type[0] == mujoco.mjtSensor.mjSENS_FRAMELINVEL:
+                body_id = s.objid[0]
+                sensor_body_names.append(self.mj_model.body(body_id).name)
+
+        self.body_names = sensor_body_names
         self.num_bodies = len(self.body_names)
         self.num_vel_limit = self.num_bodies * 3
+
+        # Indices into mj_data.xpos / xquat for observed bodies only
         self.robot_body_idxes = [
             self.mj_body_names.index(name) for name in self.body_names
         ]
-        self.robot_idx_start = self.robot_body_idxes[0]
-        self.robot_idx_end = self.robot_body_idxes[-1] + 1
 
         self.qpos_lim = np.max(self.mj_model.jnt_qposadr) + self.mj_model.jnt_qposadr[-1] - self.mj_model.jnt_qposadr[-2]
         self.qvel_lim = np.max(self.mj_model.jnt_dofadr) + self.mj_model.jnt_dofadr[-1] - self.mj_model.jnt_dofadr[-2]
@@ -180,21 +189,17 @@ class MyoLegsEnv(BaseEnv):
     
     def get_body_xpos(self, data=None):
         """
-        Returns the body positions of the agent in X, Y, Z coordinates.
+        Returns the body positions of observed bodies in X, Y, Z coordinates.
         """
-        if data is None:
-            return self.mj_data.xpos.copy()[self.robot_idx_start: self.robot_idx_end]
-        else:
-            return data.xpos.copy()[self.robot_idx_start: self.robot_idx_end]
+        src = self.mj_data if data is None else data
+        return src.xpos[self.robot_body_idxes].copy()
 
     def get_body_xquat(self, data=None):
         """
-        Returns the body rotations of the agent in quaternion
+        Returns the body rotations of observed bodies in quaternion.
         """
-        if data is None:
-            return self.mj_data.xquat.copy()[self.robot_idx_start: self.robot_idx_end]
-        else:
-            return data.xquat.copy()[self.robot_idx_start: self.robot_idx_end]
+        src = self.mj_data if data is None else data
+        return src.xquat[self.robot_body_idxes].copy()
         
     def get_body_linear_vel(self, data=None):
         """

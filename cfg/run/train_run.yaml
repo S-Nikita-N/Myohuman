@@ -42,7 +42,8 @@ task_inputs:
   # - diff_muscle_vel
 
 # File
-xml_path: "${project_root}/xml/myohuman.xml"
+xml_path: "${project_root}/xml/myohuman_v2.xml"
+ref_xml_path: "${project_root}/xml/myohuman.xml"
 initial_pose_file: "${project_root}/data/inverse_kinematics/ik_train.pkl"
 
 # Extra analysis flags
