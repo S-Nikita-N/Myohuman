@@ -170,25 +170,10 @@ class MyoLegsIm(MyoLegsTask):
 
     def setup_reference_model(self) -> None:
         """
-        Creates a secondary Mujoco model+data used to compute reference body
-        positions and muscle lengths/velocities from IK poses without touching
-        the live simulation.
-
-        If ``cfg.run.ref_xml_path`` is set, loads a separate XML for the
-        reference FK (e.g. ``myohuman.xml``).  Otherwise falls back to the
-        simulation model.
+        Creates a secondary Mujoco data buffer used to compute reference muscle
+        lengths/velocities from IK poses without touching the live simulation.
         """
-        ref_xml = getattr(self.cfg.run, "ref_xml_path", None)
-        if ref_xml and Path(ref_xml).exists():
-            self.ref_model = mujoco.MjModel.from_xml_path(ref_xml)
-            self.ref_model.opt.timestep = self.sim_timestep
-            logger.info(
-                "Reference model loaded from %s (%d bodies)",
-                ref_xml, self.ref_model.nbody,
-            )
-        else:
-            self.ref_model = self.mj_model
-        self.ref_data = mujoco.MjData(self.ref_model)
+        self.ref_data = mujoco.MjData(self.mj_model)
 
     def initialize_evaluation_metrics(self) -> None:
         """
@@ -690,10 +675,10 @@ class MyoLegsIm(MyoLegsTask):
             prev_ref_qpos = self._lookup_reference_qpos(motion_id, motion_time - self.dt)
             prev_headed = self._apply_heading(prev_ref_qpos.copy())
             mujoco.mj_differentiatePos(
-                self.ref_model, self.ref_data.qvel, self.dt,
+                self.mj_model, self.ref_data.qvel, self.dt,
                 prev_headed, headed,
             )
-        mujoco.mj_forward(self.ref_model, self.ref_data)
+        mujoco.mj_forward(self.mj_model, self.ref_data)
 
         return {
             "xpos": self.get_body_xpos(self.ref_data)[None,],

@@ -43,8 +43,7 @@ task_inputs:
 
 # File
 xml_path: "${project_root}/xml/myohuman_v2.xml"
-ref_xml_path: "${project_root}/xml/myohuman.xml"
-initial_pose_file: "${project_root}/data/inverse_kinematics/ik_train.pkl"
+initial_pose_file: "${project_root}/data/inverse_kinematics/ik_train_v2.pkl"
 
 # Extra analysis flags
 recording_biomechanics: False
