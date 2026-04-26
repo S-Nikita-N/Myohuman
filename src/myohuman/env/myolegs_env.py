@@ -353,7 +353,9 @@ class MyoLegsEnv(BaseEnv):
         """
         self.mj_data.qpos[:] = 0
         self.mj_data.qvel[:] = 0
-        self.mj_data.qpos[2] = 0.94   
+        self.mj_data.act[:] = 0
+        self.mj_data.ctrl[:] = 0
+        self.mj_data.qpos[2] = 0.94
         self.mj_data.qpos[3:7] = np.array([1, 0, 0, 0])   
         
     def forward_sim(self):
