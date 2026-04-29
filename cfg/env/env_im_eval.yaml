@@ -17,8 +17,8 @@ reward_specs:
   "k_muscle_vel": 20
   
   "w_pos": 0.7
-  "w_vel": 0.2
-  "w_energy": 0.1
+  "w_vel": 0.3
+  "w_energy": 0.015
   "w_muscle_len": 0
   "w_muscle_vel": 0
 

@@ -897,14 +897,14 @@ class MyoLegsIm(MyoLegsTask):
             body_weights=self.body_reward_weights,
         )
 
-        energy_reward = np.mean(self.curr_power_usage)
+        energy_cost = np.mean(self.curr_power_usage)
         self.curr_power_usage = []
 
-        reward += energy_reward * self.reward_specs["w_energy"]
+        reward -= self.reward_specs["w_energy"] * energy_cost
         reward += muscle_reward
 
         self.reward_info = reward_raw
-        self.reward_info["energy_reward"] = energy_reward
+        self.reward_info["energy_cost"] = energy_cost
         self.reward_info.update(muscle_reward_raw)
 
         self.record_evaluation_metrics(body_pos_subset, ref_pos_subset, body_vel_subset, ref_body_vel_subset)
@@ -913,22 +913,10 @@ class MyoLegsIm(MyoLegsTask):
 
     def compute_energy_reward(self, action: np.ndarray) -> float:
         """
-        Computes the energy efficiency reward based on the L1 and L2 norms of the action.
-
-        The reward penalizes high energy usage, with an exponential scaling defined 
-        by a configurable parameter.
-
-        Args:
-            action (np.ndarray): The action vector applied at the current step.
-
-        Returns:
-            float: The energy reward, where higher values indicate more efficient energy usage.
+        Linear energy cost: c_e = ||a||_1 + ||a||_2.
+        Subtracted from total reward as a penalty (weighted by w_energy).
         """
-        l1_energy = np.abs(action).sum()
-        l2_energy = np.linalg.norm(action)
-        energy_reward = -l1_energy - l2_energy
-        energy_reward = np.exp(self.reward_specs["k_energy"] * energy_reward)
-        return energy_reward
+        return float(np.abs(action).sum() + np.linalg.norm(action))
 
     def start_eval(self, im_eval=True):
         """
