@@ -4,7 +4,7 @@ compute_ik.py — Unified script that:
   1. Loads raw KIT motion data (.npz files)
   2. Runs SMPL Forward Kinematics to get global body positions
   3. Solves Inverse Kinematics for the myohuman Mujoco model on every frame
-  4. Saves a single reference file for the training environment
+  4. Saves reference .pkl (one file per split, or two files for --split both)
 
 Output format:
     {
@@ -13,7 +13,9 @@ Output format:
     }
 
 Usage:
-    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 python scripts/compute_ik.py --split train --workers 9
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 poetry run python scripts/compute_ik.py --split train --workers 190
+    # train + test в одном прогоне → два файла (ik_train_v2.pkl, ik_test_v2.pkl):
+    ... --split both --workers 64
 """
 
 import os
@@ -45,11 +47,11 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_KIT_DIR = str(BASE_DIR / "data" / "KIT")
 DEFAULT_SMPL_DIR = str(BASE_DIR / "data" / "smpl")
-DEFAULT_XML_PATH = str(BASE_DIR / "xml" / "myohuman.xml")
+DEFAULT_XML_PATH = str(BASE_DIR / "xml" / "myohuman_v2.xml")
 DEFAULT_TRAIN_KEYS = str(BASE_DIR / "data" / "dataset" / "kit_train_keys.txt")
 DEFAULT_TEST_KEYS = str(BASE_DIR / "data" / "dataset" / "kit_test_keys.txt")
-DEFAULT_TRAIN_OUTPUT = str(BASE_DIR / "data" / "inverse_kinematics" / "ik_train.pkl")
-DEFAULT_TEST_OUTPUT = str(BASE_DIR / "data" / "inverse_kinematics" / "ik_test.pkl")
+DEFAULT_TRAIN_OUTPUT = str(BASE_DIR / "data" / "inverse_kinematics" / "ik_train_v2.pkl")
+DEFAULT_TEST_OUTPUT = str(BASE_DIR / "data" / "inverse_kinematics" / "ik_test_v2.pkl")
 
 CHECKPOINT_EVERY = 50   # save intermediate progress every N completed motions
 TARGET_FPS = 30
@@ -95,10 +97,10 @@ MYOLEG_TRACKED_BODIES = [
 # ──────────────────────────────────────────────────────────────────────────────
 def parse_args():
     p = argparse.ArgumentParser(description="Compute IK reference data for all frames")
-    p.add_argument("--split", choices=["train", "test"], default="train",
-                   help="Which data split to process")
+    p.add_argument("--split", choices=["train", "test", "both"], default="train",
+                   help="train | test | both (both: один пул воркеров, два выходных .pkl)")
     p.add_argument("--output", type=str, default=None,
-                   help="Output .pkl path (defaults based on --split)")
+                   help="Output .pkl (train default path; при --split both задаёт только train-файл, test — по умолчанию)")
     p.add_argument("--kit-dir", type=str, default=DEFAULT_KIT_DIR)
     p.add_argument("--smpl-dir", type=str, default=DEFAULT_SMPL_DIR)
     p.add_argument("--xml-path", type=str, default=DEFAULT_XML_PATH)
@@ -107,6 +109,15 @@ def parse_args():
     p.add_argument("--workers", type=int, default=None,
                    help="Number of parallel workers (default: 1 on macOS, cpu_count elsewhere)")
     p.add_argument("--checkpoint-dir", type=str, default=str(BASE_DIR / "data" / "tmp"))
+    p.add_argument(
+        "--finalize-only",
+        action="store_true",
+        help=(
+            "Только загрузить чекпоинт и записать выходные .pkl; IK не считать. "
+            "Имеет смысл после полного прогона, если упало на joblib.dump (например, нет места на диске). "
+            "Сейчас поддерживается только при --split both (ik_both_ckpt.pkl)."
+        ),
+    )
     return p.parse_args()
 
 
@@ -284,38 +295,82 @@ def process_motion(motion_id: int, data_path: str, xml_path: str, smpl_dir: str)
 # ──────────────────────────────────────────────────────────────────────────────
 # Main
 # ──────────────────────────────────────────────────────────────────────────────
+def assemble_output(ordered_keys: list, checkpoint: dict) -> dict:
+    """Собрать {"frames": {mid: ...}, "metadata": {mid: ...}} в порядке ordered_keys."""
+    out = {"frames": {}, "metadata": {}}
+    for mid, key in enumerate(ordered_keys):
+        if key in checkpoint:
+            out["frames"][mid] = checkpoint[key]["frames"]
+            out["metadata"][mid] = checkpoint[key]["metadata"]
+    return out
+
+
 def main():
     args = parse_args()
 
-    # Resolve paths
-    keys_path = args.train_keys if args.split == "train" else args.test_keys
-    output_path = args.output or (
-        DEFAULT_TRAIN_OUTPUT if args.split == "train" else DEFAULT_TEST_OUTPUT
-    )
-    ckpt_path = Path(args.checkpoint_dir) / f"ik_{args.split}_ckpt.pkl"
+    if args.finalize_only and args.split != "both":
+        raise SystemExit("--finalize-only поддерживается только с --split both")
 
-    # Discover motions
-    keys = load_keys(keys_path)
-    logger.info(f"Loaded {len(keys)} keys for split '{args.split}'")
+    if args.split == "both":
+        train_keys = load_keys(args.train_keys)
+        test_keys = load_keys(args.test_keys)
+        combined = list(dict.fromkeys(train_keys + test_keys))
+        keys_for_discover = combined
+        ckpt_path = Path(args.checkpoint_dir) / "ik_both_ckpt.pkl"
+        output_train = args.output or DEFAULT_TRAIN_OUTPUT
+        output_test = DEFAULT_TEST_OUTPUT
+        logger.info(
+            "Split 'both': %d train keys, %d test keys → %d unique keys",
+            len(train_keys), len(test_keys), len(combined),
+        )
+    elif args.split == "train":
+        train_keys = load_keys(args.train_keys)
+        combined = train_keys
+        keys_for_discover = combined
+        ckpt_path = Path(args.checkpoint_dir) / "ik_train_ckpt.pkl"
+        output_train = args.output or DEFAULT_TRAIN_OUTPUT
+        logger.info(f"Loaded {len(combined)} keys for split 'train'")
+    else:
+        test_keys = load_keys(args.test_keys)
+        combined = test_keys
+        keys_for_discover = combined
+        ckpt_path = Path(args.checkpoint_dir) / "ik_test_ckpt.pkl"
+        output_train = args.output or DEFAULT_TEST_OUTPUT
+        logger.info(f"Loaded {len(combined)} keys for split 'test'")
 
-    key_to_path = discover_motions(args.kit_dir, keys)
-    logger.info(f"Found {len(key_to_path)}/{len(keys)} matching .npz files")
+    key_to_path = discover_motions(args.kit_dir, keys_for_discover)
+    logger.info(f"Found {len(key_to_path)}/{len(keys_for_discover)} matching .npz files")
 
-    # Assign sequential integer IDs (same order as in the keys file)
-    ordered_keys = [k for k in keys if k in key_to_path]
+    ordered_keys = [k for k in combined if k in key_to_path]
     motion_id_map = {mid: key for mid, key in enumerate(ordered_keys)}
+
+    if args.split == "both":
+        ordered_train_out = [k for k in train_keys if k in key_to_path]
+        ordered_test_out = [k for k in test_keys if k in key_to_path]
 
     # Load checkpoint (keyed by motion key name for stability across key-file changes)
     ckpt_path.parent.mkdir(parents=True, exist_ok=True)
-    if ckpt_path.exists():
+    if args.finalize_only:
+        if not ckpt_path.exists():
+            raise SystemExit(f"--finalize-only: нет файла чекпоинта {ckpt_path}")
+        checkpoint = joblib.load(ckpt_path)
+        logger.info(
+            "Finalize-only: загружен чекпоинт (%d записей), IK пропускается",
+            len(checkpoint),
+        )
+        remaining = []
+    elif ckpt_path.exists():
         checkpoint = joblib.load(ckpt_path)
         logger.info(f"Resumed checkpoint: {len(checkpoint)} motions already done")
+        remaining = [(mid, key) for mid, key in motion_id_map.items()
+                     if key not in checkpoint]
     else:
         checkpoint = {}
+        remaining = [(mid, key) for mid, key in motion_id_map.items()
+                     if key not in checkpoint]
 
-    remaining = [(mid, key) for mid, key in motion_id_map.items()
-                 if key not in checkpoint]
-    logger.info(f"{len(remaining)} motions remaining to process")
+    if not args.finalize_only:
+        logger.info(f"{len(remaining)} motions remaining to process")
 
     # Process
     if remaining:
@@ -353,17 +408,25 @@ def main():
         if since_save > 0:
             joblib.dump(checkpoint, ckpt_path)
 
-    # ── Assemble final output (sequential integer IDs in key-file order) ────
-    output = {"frames": {}, "metadata": {}}
-    for mid in sorted(motion_id_map.keys()):
-        key = motion_id_map[mid]
-        if key in checkpoint:
-            output["frames"][mid] = checkpoint[key]["frames"]
-            output["metadata"][mid] = checkpoint[key]["metadata"]
-
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(output, output_path)
-    logger.info(f"Saved {len(output['frames'])} motions → {output_path}")
+    if args.split == "both":
+        out_tr = assemble_output(ordered_train_out, checkpoint)
+        out_te = assemble_output(ordered_test_out, checkpoint)
+        Path(output_train).parent.mkdir(parents=True, exist_ok=True)
+        Path(output_test).parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(out_tr, output_train)
+        joblib.dump(out_te, output_test)
+        logger.info(
+            "Saved %d train → %s; %d test → %s",
+            len(out_tr["frames"]), output_train,
+            len(out_te["frames"]), output_test,
+        )
+    else:
+        output_path = output_train
+        ordered = ordered_keys
+        output = assemble_output(ordered, checkpoint)
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(output, output_path)
+        logger.info(f"Saved {len(output['frames'])} motions → {output_path}")
 
 
 if __name__ == "__main__":
