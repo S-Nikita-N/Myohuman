@@ -12,13 +12,12 @@ clip_actions: True
 reward_specs:
   "k_pos": 200
   "k_vel": 5
-  "k_energy": 0.05
   "k_muscle_len": 2000
   "k_muscle_vel": 20
   
   "w_pos": 0.7
   "w_vel": 0.3
-  "w_energy": 0.015
+  "w_energy": 0.002
   "w_muscle_len": 0
   "w_muscle_vel": 0
 
