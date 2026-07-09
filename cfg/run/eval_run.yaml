@@ -42,8 +42,8 @@ task_inputs:
   # - diff_muscle_vel
 
 # File paths
-xml_path: "${project_root}/xml/myohuman_v2.xml"
-initial_pose_file: "${project_root}/data/inverse_kinematics/ik_test_v2.pkl"
+xml_path: "${project_root}/xml/myohuman.xml"
+initial_pose_file: "${project_root}/data/inverse_kinematics/ik_test.pkl"
 
 # Extra analysis flags
 recording_biomechanics: False

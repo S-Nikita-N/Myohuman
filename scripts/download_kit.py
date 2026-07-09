@@ -35,6 +35,6 @@ def main():
     print(f"Готово: {local_dir}")
 
 
-# poetry run python scripts/download_kit.py --data-dir data/
+# uv run python scripts/download_kit.py --data-dir data/
 if __name__ == "__main__":
     main()

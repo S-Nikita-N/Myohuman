@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
@@ -17,18 +19,23 @@ sedi() {
 }
 # -----------------------------------------------------
 
-echo "Installing poetry..."
-pip install poetry
+if ! command -v uv >/dev/null 2>&1; then
+    echo "Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.local/bin:$PATH"
+fi
 
 echo "Installing project dependencies..."
-poetry install
+uv sync
 
 echo "Installing chumpy (PEP517 isolation off)..."
-poetry run pip install --no-build-isolation "chumpy==0.70"
+# chumpy собирается legacy-способом: ему нужны pip/setuptools в venv
+uv pip install pip setuptools wheel
+uv run python -m pip install --no-build-isolation "chumpy==0.70"
 
 echo "Patching chumpy for Python >=3.11 (getargspec -> getfullargspec)..."
 CH_FILE=$(
-poetry run python <<'PY'
+uv run python <<'PY'
 import site
 import pathlib
 
@@ -46,7 +53,7 @@ fi
 
 echo "Patching chumpy __init__.py for NumPy>=2.0 imports..."
 CH_INIT=$(
-poetry run python <<'PY'
+uv run python <<'PY'
 import site
 import pathlib
 
@@ -63,4 +70,4 @@ else
     echo "chumpy/__init__.py not found; skip patch"
 fi
 
-echo "Done. To enter the venv run: poetry shell"
+echo "Done. Run commands with: uv run python ..."

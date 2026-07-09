@@ -13,8 +13,8 @@ Output format:
     }
 
 Usage:
-    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 poetry run python scripts/compute_ik.py --split train --workers 190
-    # train + test в одном прогоне → два файла (ik_train_v2.pkl, ik_test_v2.pkl):
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 uv run python scripts/compute_ik.py --split train --workers 190
+    # train + test в одном прогоне → два файла (ik_train.pkl, ik_test.pkl):
     ... --split both --workers 64
 """
 
@@ -47,11 +47,11 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_KIT_DIR = str(BASE_DIR / "data" / "KIT")
 DEFAULT_SMPL_DIR = str(BASE_DIR / "data" / "smpl")
-DEFAULT_XML_PATH = str(BASE_DIR / "xml" / "myohuman_v2.xml")
+DEFAULT_XML_PATH = str(BASE_DIR / "xml" / "myohuman.xml")
 DEFAULT_TRAIN_KEYS = str(BASE_DIR / "data" / "dataset" / "kit_train_keys.txt")
 DEFAULT_TEST_KEYS = str(BASE_DIR / "data" / "dataset" / "kit_test_keys.txt")
-DEFAULT_TRAIN_OUTPUT = str(BASE_DIR / "data" / "inverse_kinematics" / "ik_train_v2.pkl")
-DEFAULT_TEST_OUTPUT = str(BASE_DIR / "data" / "inverse_kinematics" / "ik_test_v2.pkl")
+DEFAULT_TRAIN_OUTPUT = str(BASE_DIR / "data" / "inverse_kinematics" / "ik_train.pkl")
+DEFAULT_TEST_OUTPUT = str(BASE_DIR / "data" / "inverse_kinematics" / "ik_test.pkl")
 
 CHECKPOINT_EVERY = 50   # save intermediate progress every N completed motions
 TARGET_FPS = 30
