@@ -271,6 +271,13 @@ class MyoLegsEnv(BaseEnv):
         reward = 0
         return reward
 
+    def compute_energy_reward(self, action: np.ndarray) -> float:
+        """
+        Linear energy cost: c_e = ||a||_1 + ||a||_2.
+        Used by physics_step to track power usage each substep.
+        """
+        return float(np.abs(action).sum() + np.linalg.norm(action))
+
     def compute_reset(self) -> Tuple[bool, bool]:
         """
         Determines whether the episode should reset based on termination and truncation conditions.

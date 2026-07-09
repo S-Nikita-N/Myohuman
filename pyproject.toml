@@ -48,3 +48,7 @@ smplx = { git = "https://github.com/ZhengyiLuo/smplx.git", rev = "a5b8e4ac14f79f
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/myohuman"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -48,7 +48,7 @@ class LoggerRL:
         logger.avg_episode_len = logger.num_steps / logger.num_episodes
         logger.avg_episode_reward = logger.total_reward / logger.num_episodes
         logger.max_episode_reward = max([x.max_episode_reward for x in logger_list])
-        logger.min_episode_reward = max([x.min_episode_reward for x in logger_list])
+        logger.min_episode_reward = min([x.min_episode_reward for x in logger_list])
         logger.avg_reward = logger.total_reward / logger.num_steps
         logger.max_reward = max([x.max_reward for x in logger_list])
         logger.min_reward = min([x.min_reward for x in logger_list])

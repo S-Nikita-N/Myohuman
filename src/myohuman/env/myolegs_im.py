@@ -816,7 +816,7 @@ class MyoLegsIm(MyoLegsTask):
         self.ref_pos.append(ref_pos.copy())
         self.ref_rot.append(ref_rot.copy())
         self.ref_vel.append(ref_vel.copy())
-        self.motion_id.append(self.motion_start_idx)
+        self.motion_id.append(self._sampled_motion_id)
         self.muscle_forces.append(self.get_muscle_force().copy())
         self.muscle_controls.append(self.mj_data.ctrl.copy())
 
@@ -911,13 +911,6 @@ class MyoLegsIm(MyoLegsTask):
 
         return reward
 
-    def compute_energy_reward(self, action: np.ndarray) -> float:
-        """
-        Linear energy cost: c_e = ||a||_1 + ||a||_2.
-        Subtracted from total reward as a penalty (weighted by w_energy).
-        """
-        return float(np.abs(action).sum() + np.linalg.norm(action))
-
     def start_eval(self, im_eval=True):
         """
         Prepares the environment for evaluation (no heading randomization).
@@ -927,7 +920,6 @@ class MyoLegsIm(MyoLegsTask):
         self.random_start = False
         self.im_eval = im_eval
         self.test = True
-        self._temp_termination_distance = self.termination_distance
 
     def end_eval(self):
         """
@@ -937,7 +929,6 @@ class MyoLegsIm(MyoLegsTask):
         self.random_start = self._temp_random_start
         self.im_eval = False
         self.test = False
-        self.termination_distance = self._temp_termination_distance
         self.sample_motions()
 
     def get_muscle_force(self) -> np.ndarray:

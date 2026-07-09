@@ -136,7 +136,7 @@ class ForwardKinematics:
         pose_quat = tRot.axis_angle_to_quaternion(pose_aa)
         pose_mat = tRot.quaternion_to_matrix(pose_quat)
 
-        if pose_mat.shape != 5:
+        if len(pose_mat.shape) != 5:
             pose_mat = pose_mat.reshape(B, T, -1, 3, 3)
 
         trans = trans + self._offsets[:, 0:1].to(device)

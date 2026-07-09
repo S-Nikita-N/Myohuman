@@ -742,7 +742,7 @@ def quat_angle_axis(x):
     s = 2 * (x[..., 0]**2) - 1
     angle = s.clamp(-1, 1).arccos()  # just to be safe
     axis = x[..., 1:]
-    axis /= axis.norm(p=2, dim=-1, keepdim=True).clamp(min=1e-10)
+    axis = axis / axis.norm(p=2, dim=-1, keepdim=True).clamp(min=1e-10)
     return angle, axis
 
 
