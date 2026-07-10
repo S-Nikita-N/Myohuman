@@ -4,15 +4,20 @@ import numpy as np
 def wxyz_to_xyzw(quat):
     return quat[..., [1, 2, 3, 0]]
 
+
 def xyzw_to_wxyz(quat):
     return quat[..., [3, 0, 1, 2]]
 
 
-def normalize(v, eps = 1e-9):
-    return v / np.linalg.norm(v, ord = 2, axis = -1).clip(min=eps, max=None)[..., None]
+def normalize(v, eps=1e-9):
+    return (
+        v / np.linalg.norm(v, ord=2, axis=-1).clip(min=eps, max=None)[..., None]
+    )
+
 
 def quat_unit(a):
     return normalize(a)
+
 
 def quat_from_angle_axis(angle, axis):
     theta = (angle / 2)[..., None]
@@ -27,10 +32,15 @@ def quat_rotate(q, v):
     q_vec = q[:, 1:]
     a = v * (2.0 * q_w**2 - 1.0)[..., None]
     b = np.cross(q_vec, v, axis=-1) * q_w[..., None] * 2.0
-    c = q_vec * \
-        (q_vec.reshape(shape[0], 1, 3) @ v.reshape(
-            shape[0], 3, 1)).squeeze(-1) * 2.0
+    c = (
+        q_vec
+        * (q_vec.reshape(shape[0], 1, 3) @ v.reshape(shape[0], 3, 1)).squeeze(
+            -1
+        )
+        * 2.0
+    )
     return a + b + c
+
 
 def calc_heading(q):
     ref_dir = np.zeros((q.shape[0], 3))
@@ -49,6 +59,7 @@ def calc_heading_quat(q):
     heading_q = quat_from_angle_axis(heading, axis)
     return heading_q
 
+
 def calc_heading_quat_inv(q):
     heading = calc_heading(q)
     axis = np.zeros((q.shape[0], 3))
@@ -57,10 +68,12 @@ def calc_heading_quat_inv(q):
     heading_q = quat_from_angle_axis(-heading, axis)
     return heading_q
 
+
 def quat_conjugate(a):
     shape = a.shape
     a = a.reshape(-1, 4)
     return np.concatenate((a[:, :1], -a[:, 1:]), axis=-1).reshape(shape)
+
 
 def quat_mul(a, b):
     assert a.shape == b.shape
@@ -84,6 +97,7 @@ def quat_mul(a, b):
 
     return quat
 
+
 def quat_to_tan_norm(q):
     ref_tan = np.zeros((q.shape[0], 3))
     ref_tan[..., 0] = 1
@@ -96,8 +110,10 @@ def quat_to_tan_norm(q):
     norm_tan = np.concatenate([tan, norm], axis=len(tan.shape) - 1)
     return norm_tan
 
+
 def normalize_angle(x):
     return np.arctan2(np.sin(x), np.cos(x))
+
 
 def quat_to_angle_axis(q):
     min_theta = 1e-5
@@ -111,7 +127,7 @@ def quat_to_angle_axis(q):
 
     mask = np.abs(sin_theta) > min_theta
     default_axis = np.zeros_like(axis)
-    
+
     default_axis[..., -1] = 1
 
     angle = np.where(mask, angle, np.zeros_like(angle))
@@ -125,14 +141,16 @@ def quat_to_exp_map(q):
     exp_map = angle_axis_to_exp_map(angle, axis)
     return exp_map
 
+
 def angle_axis_to_exp_map(angle, axis):
     angle_expand = angle[..., None]
     exp_map = angle_expand * axis
     return exp_map
 
-def remove_base_rot(quat, humanoid_type = "smpl"):
+
+def remove_base_rot(quat, humanoid_type="smpl"):
     if humanoid_type in ["smpl", "smplh", "smplx"]:
-        base_rot = quat_conjugate(np.array([[0.5, 0.5, 0.5, 0.5]])) #SMPL
+        base_rot = quat_conjugate(np.array([[0.5, 0.5, 0.5, 0.5]]))  # SMPL
     else:
         raise ValueError(
             f"remove_base_rot: unsupported humanoid_type '{humanoid_type}'. "

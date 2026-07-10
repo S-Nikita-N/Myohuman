@@ -4,7 +4,9 @@ import mujoco
 
 SIMULATE = False
 
-parser = argparse.ArgumentParser(description="Launch MuJoCo passive viewer for the hand model.")
+parser = argparse.ArgumentParser(
+    description="Launch MuJoCo passive viewer for the hand model."
+)
 parser.add_argument(
     "--simulate",
     type=int,
@@ -15,7 +17,9 @@ parser.add_argument(
 parser.add_argument(
     "--xml-path",
     type=str,
-    default=str(Path(__file__).resolve().parent.parent / "xml" / "myohuman.xml"),
+    default=str(
+        Path(__file__).resolve().parent.parent / "xml" / "myohuman.xml"
+    ),
     help="Path to the XML model; default is resolved relative to this script.",
 )
 

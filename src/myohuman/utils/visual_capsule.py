@@ -14,7 +14,7 @@ def add_visual_capsule(scene, point1, point2, radius, rgba):
         np.zeros(3),
         np.zeros(3),
         np.zeros(9),
-        rgba.astype(np.float32)
+        rgba.astype(np.float32),
     )
     # mujoco.mjv_connector(scene.geoms[scene.ngeom-1],
     #                         mujoco.mjtGeom.mjGEOM_CAPSULE, radius,
@@ -25,5 +25,5 @@ def add_visual_capsule(scene, point1, point2, radius, rgba):
         mujoco.mjtGeom.mjGEOM_CAPSULE,
         radius,
         point1,
-        point2
+        point2,
     )

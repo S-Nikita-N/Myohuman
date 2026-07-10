@@ -1,7 +1,34 @@
+# Python
 *.DS_Store*
 *__pycache__*
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtual envs
+.venv/
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.json
+htmlcov/
+
+# Property-test database
+.hypothesis/
+
+# Hydra / experiment outputs
+outputs/
+multirun/
 models/
 data/KIT
 data/tmp/
 data/trained_models/
+
+# ML artifacts
+*.ckpt
+*.pt
 wandb/

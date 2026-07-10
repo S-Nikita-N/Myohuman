@@ -43,7 +43,7 @@ class ForwardKinematics:
             "R_Wrist",
             "R_Hand",
         ]
-        
+
         self._parents = [
             -1,
             0,
@@ -78,9 +78,7 @@ class ForwardKinematics:
         ]  # Apply Mujoco order
         self.num_joints = len(self._parents)
         self.dt = 1 / 30
-        self.update_model(
-            torch.zeros((1, 10))
-        )  # default gender 0 and pose 0.
+        self.update_model(torch.zeros((1, 10)))  # default gender 0 and pose 0.
 
     def update_model(self, betas, dt=1 / 30):
         betas = betas.cpu().float()
@@ -101,7 +99,7 @@ class ForwardKinematics:
         reordered_joint_offsets = dict()
         for n in SMPL_BONE_ORDER_NAMES:
             reordered_joint_offsets[n] = joint_offsets[n]
-        
+
         offsets = []
         for n in self.model_names:
             offsets.append(reordered_joint_offsets[n])
@@ -113,9 +111,9 @@ class ForwardKinematics:
         self.dt = dt
 
     def fk_batch(
-            self,
-            pose_aa: torch.Tensor,
-            trans: torch.Tensor,
+        self,
+        pose_aa: torch.Tensor,
+        trans: torch.Tensor,
     ):
         """
         Performs batched forward kinematics (FK) for SMPL pose and translation inputs, producing Mujoco-compatible outputs.
@@ -126,7 +124,7 @@ class ForwardKinematics:
                 - `T`: Sequence length.
                 - `J`: Number of joints.
             trans (torch.Tensor): Global translations of shape `(B, T, 3)`.
-            
+
         Returns:
             EasyDict
         """
@@ -153,7 +151,8 @@ class ForwardKinematics:
 
         wbody_rot = tRot.matrix_to_quaternion(wbody_mat)
         rigidbody_linear_velocity = self._compute_velocity(
-            wbody_pos, self.dt,
+            wbody_pos,
+            self.dt,
         )
         rigidbody_angular_velocity = self._compute_angular_velocity(
             wbody_rot, self.dt
@@ -168,7 +167,9 @@ class ForwardKinematics:
         return_dict.global_angular_velocity = rigidbody_angular_velocity
         return_dict.global_velocity = rigidbody_linear_velocity
 
-        dof_pos = tRot.matrix_to_euler_angles(pose_mat_ordered, "XYZ")[..., 1:, :]
+        dof_pos = tRot.matrix_to_euler_angles(pose_mat_ordered, "XYZ")[
+            ..., 1:, :
+        ]
 
         return_dict.dof_pos = torch.cat(
             [tRot.fix_continous_dof(dof_pos_t)[None,] for dof_pos_t in dof_pos],
@@ -209,7 +210,9 @@ class ForwardKinematics:
 
         return return_dict
 
-    def forward_kinematics_batch(self, rotations, root_rotations, root_positions):
+    def forward_kinematics_batch(
+        self, rotations, root_rotations, root_positions
+    ):
         """
         Perform forward kinematics using the given trajectory and local rotations.
         Arguments (where B = batch size, J = number of joints):
@@ -224,7 +227,10 @@ class ForwardKinematics:
         positions_world = []
         rotations_world = []
         expanded_offsets = (
-            self._offsets[:, None].expand(B, seq_len, J, 3).to(device).type(dtype)
+            self._offsets[:, None]
+            .expand(B, seq_len, J, 3)
+            .to(device)
+            .type(dtype)
         )
 
         for i in range(J):
@@ -241,7 +247,8 @@ class ForwardKinematics:
                 )
 
                 rot_mat = torch.matmul(
-                    rotations_world[self._parents[i]], rotations[:, :, (i - 1): i, :]
+                    rotations_world[self._parents[i]],
+                    rotations[:, :, (i - 1) : i, :],
                 )
 
                 positions_world.append(jpos)
@@ -266,13 +273,16 @@ class ForwardKinematics:
         return velocity
 
     @staticmethod
-    def _compute_angular_velocity(rotations, time_delta: float, guassian_filter=True):
+    def _compute_angular_velocity(
+        rotations, time_delta: float, guassian_filter=True
+    ):
         # assume the second last dimension is the time axis
 
         diff_quat_data = tRot.quat_identity_like(rotations).to(rotations)
 
         diff_quat_data[..., 1:, :, :] = tRot.quat_mul_norm(
-            rotations[..., 1:, :, :], tRot.quat_inverse(rotations[..., :-1, :, :])
+            rotations[..., 1:, :, :],
+            tRot.quat_inverse(rotations[..., :-1, :, :]),
         )
         diff_quat_data[..., 0, :, :] = diff_quat_data[..., 1, :, :]
         diff_angle, diff_axis = tRot.quat_angle_axis(diff_quat_data)

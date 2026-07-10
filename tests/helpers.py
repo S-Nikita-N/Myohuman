@@ -4,6 +4,7 @@ These inputs are frozen: changing them invalidates the golden files in
 tests/golden/. Regenerate goldens with `uv run python tests/golden/generate_goldens.py`
 only when a behavior change is intentional.
 """
+
 import numpy as np
 
 from pathlib import Path
@@ -68,8 +69,16 @@ def imitation_obs_inputs(num_muscles=10):
     ref_muscle_len = muscle_len + 0.01 * g.normal(size=num_muscles)
     ref_muscle_vel = muscle_vel + 0.1 * g.normal(size=num_muscles)
     return (
-        root_pos, root_rot, body_pos, body_vel, ref_body_pos, ref_body_vel,
-        muscle_len, muscle_vel, ref_muscle_len, ref_muscle_vel,
+        root_pos,
+        root_rot,
+        body_pos,
+        body_vel,
+        ref_body_pos,
+        ref_body_vel,
+        muscle_len,
+        muscle_vel,
+        ref_muscle_len,
+        ref_muscle_vel,
     )
 
 

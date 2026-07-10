@@ -1,0 +1,70 @@
+# Local quality gate: runs before every commit (`pre-commit install`).
+# Mirrors the CI checks so problems surface on your machine, not in CI.
+#
+# Vendored math (poselib/, utils/transformation.py, utils/pytorch3d_transforms.py)
+# is third-party and excluded from the opinionated style checks.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=4096]
+
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.43.5
+    hooks:
+      - id: typos # catch typos in code, comments, docstrings and docs
+        args: [--force-exclude]
+
+  # Adds a magic trailing comma to multi-line constructs; ruff-format (next)
+  # then keeps them exploded one element per line.
+  - repo: https://github.com/asottile/add-trailing-comma
+    rev: v3.1.0
+    hooks:
+      - id: add-trailing-comma
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.17
+    hooks:
+      - id: ruff-check # lint, auto-fixing what it safely can
+        args: [--fix]
+      - id: ruff-format # format
+
+  # mypy needs the project's own environment (torch type stubs), so run the
+  # version installed in the uv venv rather than an isolated hook env.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      # Style-guide rules encoded as checks (code-style §6 and §1).
+      - id: check-imports
+        name: Import hygiene — absolute, block order, ladders (code-style §6)
+        entry: uv run python tools/pre_commit/check_imports.py
+        language: system
+        types: [python]
+        exclude: ^src/myohuman/poselib/|^src/myohuman/utils/(transformation|pytorch3d_transforms)\.py$
+
+      - id: check-banners
+        name: Banners — Tier-1 width/indent/presence + Tier-2 intro spacing (code-style §1-§2)
+        entry: uv run python tools/pre_commit/check_banners.py
+        language: system
+        types: [python]
+        exclude: ^src/myohuman/poselib/|^src/myohuman/utils/(transformation|pytorch3d_transforms)\.py$
+
+      # Keep the library/training code device-agnostic (CPU / CUDA / MPS):
+      # no hard-coded cuda in src/ (append `# device-ok` for exceptions).
+      - id: check-device
+        name: No hard-coded CUDA device (device-agnostic)
+        entry: uv run python tools/pre_commit/check_device.py
+        language: system
+        files: ^src/.*\.py$
+        exclude: ^src/myohuman/poselib/

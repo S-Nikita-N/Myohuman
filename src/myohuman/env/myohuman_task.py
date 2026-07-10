@@ -1,15 +1,15 @@
 from abc import abstractmethod
-from typing import Optional, Tuple
 import numpy as np
 from myohuman.env.myohuman_env import MyoHumanEnv
 
 
 class MyoHumanTask(MyoHumanEnv):
-
     def __init__(self, cfg):
         super().__init__(cfg)
 
-    def reset(self, seed: Optional[int] = None, options: Optional[dict] = None) -> Tuple[dict, dict]:
+    def reset(
+        self, seed: int | None = None, options: dict | None = None
+    ) -> tuple[dict, dict]:
         # First reset humanoid, then reset task, then reset the simulation.
         "Resets at MyoHumanTask level"
         self.reset_task(options=options)

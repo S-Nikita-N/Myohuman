@@ -3,23 +3,27 @@ import numpy as np
 import gymnasium as gym
 import mujoco
 import time
-from typing import Optional
 
 
 class BaseEnv(gym.Env):
-
     def __init__(self, cfg):
-        self.clip_actions = False                              # "flag, used in setting the action space and when building pd actions scales"
-        self.render_mode = "human"                             # "human or rgb array"
+        self.clip_actions = False  # "flag, used in setting the action space and when building pd actions scales"
+        self.render_mode = "human"  # "human or rgb array"
 
-        self.headless = cfg.run.headless                       # "render a screen or not"
-        self.sim_timestep_inv = cfg.env.sim_timestep_inv       # "inverse of simulation timestep"
-        self.sim_timestep = 1.0 / self.sim_timestep_inv        # "simulation timestep"
-        self.control_freq_inv = cfg.env.control_frequency_inv  # self.sim_timestep_inv / self.control_freq_inv should be 30.0
-        self.cur_t = 0                                         # Current simulation time step
-        self.dt = self.sim_timestep * self.control_freq_inv    # control time step
-        self.fast_forward = cfg.run.fast_forward               # "fast forward the simulation"
-        
+        self.headless = cfg.run.headless  # "render a screen or not"
+        self.sim_timestep_inv = (
+            cfg.env.sim_timestep_inv
+        )  # "inverse of simulation timestep"
+        self.sim_timestep = 1.0 / self.sim_timestep_inv  # "simulation timestep"
+        self.control_freq_inv = (
+            cfg.env.control_frequency_inv
+        )  # self.sim_timestep_inv / self.control_freq_inv should be 30.0
+        self.cur_t = 0  # Current simulation time step
+        self.dt = self.sim_timestep * self.control_freq_inv  # control time step
+        self.fast_forward = (
+            cfg.run.fast_forward
+        )  # "fast forward the simulation"
+
         self.viewer = None
         self.renderer = None
         self.camera = -1
@@ -27,7 +31,7 @@ class BaseEnv(gym.Env):
         self.disable_reset = False
         self.follow = False
 
-    def reset(self, seed: Optional[int] = None, options=None):
+    def reset(self, seed: int | None = None, options=None):
         """
         Resets the environment to its initial state.
 
@@ -48,13 +52,13 @@ class BaseEnv(gym.Env):
             self.render()
 
         return observation, info
-    
+
     def compute_observations(self):
         raise NotImplementedError
 
     def compute_info(self):
         raise NotImplementedError
-    
+
     def step(self, action: np.ndarray):
         """
         Takes a step in the environment.
@@ -74,20 +78,22 @@ class BaseEnv(gym.Env):
         self.physics_step(action)
 
         # compute observations, rewards, resets, ...
-        observation, reward, terminated, truncated, info = self.post_physics_step(action)
+        observation, reward, terminated, truncated, info = (
+            self.post_physics_step(action)
+        )
 
         # if human render update the visualizer
         if self.render_mode == "human":
             self.render()
 
         return observation, reward, terminated, truncated, info
-    
+
     def physics_step(self, action):
         raise NotImplementedError
-    
+
     def post_physics_step(self, action):
         raise NotImplementedError
-    
+
     def render(self):
         """
         Renders the environment.
@@ -100,14 +106,14 @@ class BaseEnv(gym.Env):
         if not self.headless:
             if self.viewer is None and self.renderer is None:
                 self.create_viewer()
-            
+
             if self.render_mode == "human":
                 self.viewer.sync()
                 if self.follow:
                     self.viewer.cam.lookat = self.mj_data.qpos[:3]
                 if not self.fast_forward:
-                    time.sleep(1. / 100)
-            
+                    time.sleep(1.0 / 100)
+
             if self.render_mode == "rgb_array":
                 self.renderer.update_scene(self.mj_data, camera=self.camera)
                 pixels = self.renderer.render()
@@ -119,8 +125,8 @@ class BaseEnv(gym.Env):
         """
         if self.viewer is not None:
             self.viewer.close()
-    
-    def seed(self, seed: Optional[int] = None):
+
+    def seed(self, seed: int | None = None):
         """
         Set the random seed for the environment.
 
@@ -147,8 +153,10 @@ class BaseEnv(gym.Env):
 
     def create_viewer(self):
         if not self.headless and self.render_mode == "human":
-            self.viewer = mujoco.viewer.launch_passive(self.mj_model, self.mj_data, key_callback=self.key_callback)
-            
+            self.viewer = mujoco.viewer.launch_passive(
+                self.mj_model, self.mj_data, key_callback=self.key_callback
+            )
+
         if not self.headless and self.render_mode == "rgb_array":
             self._create_renderer()
 

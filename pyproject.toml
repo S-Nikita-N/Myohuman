@@ -46,9 +46,66 @@ dependencies = [
 [tool.uv.sources]
 smplx = { git = "https://github.com/ZhengyiLuo/smplx.git", rev = "a5b8e4ac14f79f3f33fd2cf2a16e6f507146b813" }
 
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "hypothesis>=6.0",
+    "pre-commit>=3.5",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/myohuman"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+pythonpath = ["tools/pre_commit"]
+
+# Vendored third-party math is excluded from lint/format/style everywhere.
+[tool.ruff]
+line-length = 80
+target-version = "py312"
+extend-exclude = [
+    "src/myohuman/poselib",
+    "src/myohuman/utils/transformation.py",
+    "src/myohuman/utils/pytorch3d_transforms.py",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "UP", "B", "SIM", "C4", "PT"]
+
+[tool.ruff.lint.per-file-ignores]
+# scripts pin sys.path / env before importing project modules.
+"scripts/*" = ["E402"]
+
+[tool.typos.files]
+extend-exclude = [
+    "src/myohuman/poselib",
+    "src/myohuman/utils/transformation.py",
+    "src/myohuman/utils/pytorch3d_transforms.py",
+]
+
+# Relaxed over legacy untyped code: catch real type errors without demanding
+# annotations everywhere (full strict typing is a separate follow-up).
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tools"]
+ignore_missing_imports = true
+warn_redundant_casts = true
+warn_unused_configs = true
+
+[tool.coverage.run]
+branch = true
+source = ["myohuman", "tools"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

@@ -1,0 +1,42 @@
+# Dependabot — keep the boring tooling fresh, leave the science core alone.
+# Safety model: only low-risk, independent dev tools are auto-bumped (each PR
+# is verified by the CI gate). Heavy / numerically-sensitive ML packages are
+# pinned and bumped by hand, together, with the correctness suite re-run — an
+# auto-bump there can pass CI yet silently shift results or break on real
+# hardware (CUDA/MPS), so it stays a deliberate human event.
+version: 2
+
+updates:
+  # ── Python deps (uv): dev tooling, grouped into one weekly PR ──
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+    # One tidy PR for the safe tooling bumps instead of a flood of singles.
+    groups:
+      dev-tooling:
+        patterns:
+          - "*"
+    # Heavy / numerically-sensitive deps (your ML framework) — pinned and bumped
+    # by hand with the correctness suite re-run; never auto. Uncomment and name
+    # them once the project depends on them:
+    # ignore:
+    #   - dependency-name: "your-ml-framework"   # e.g. torch, jax, tensorflow
+
+  # ── GitHub Actions: pin-bumps for CI workflow actions (safe, independent) ──
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(ci)"

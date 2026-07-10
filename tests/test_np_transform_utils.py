@@ -4,6 +4,7 @@ These functions feed every observation computed by the env, so their exact
 numeric behavior is pinned against golden snapshots. Property tests add
 mathematical invariants that any correct implementation must satisfy.
 """
+
 import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation as sRot
@@ -23,10 +24,15 @@ GOLDEN = np.load(H.GOLDEN_DIR / "np_transform.npz")
         ("quat_conjugate", lambda: npt.quat_conjugate(GOLDEN["q"])),
         ("calc_heading", lambda: npt.calc_heading(GOLDEN["q"])),
         ("calc_heading_quat", lambda: npt.calc_heading_quat(GOLDEN["q"])),
-        ("calc_heading_quat_inv", lambda: npt.calc_heading_quat_inv(GOLDEN["q"])),
+        (
+            "calc_heading_quat_inv",
+            lambda: npt.calc_heading_quat_inv(GOLDEN["q"]),
+        ),
         ("quat_to_tan_norm", lambda: npt.quat_to_tan_norm(GOLDEN["q"])),
-        ("quat_from_angle_axis",
-         lambda: npt.quat_from_angle_axis(GOLDEN["angle"], GOLDEN["axis"])),
+        (
+            "quat_from_angle_axis",
+            lambda: npt.quat_from_angle_axis(GOLDEN["angle"], GOLDEN["axis"]),
+        ),
         ("normalize", lambda: npt.normalize(GOLDEN["v"])),
         ("quat_to_exp_map", lambda: npt.quat_to_exp_map(GOLDEN["q"])),
     ],
@@ -37,13 +43,19 @@ def test_golden(key, fn):
 
 def test_quat_to_angle_axis_golden():
     angle, axis = npt.quat_to_angle_axis(GOLDEN["q"])
-    np.testing.assert_allclose(angle, GOLDEN["quat_to_angle_axis_angle"], rtol=1e-10)
-    np.testing.assert_allclose(axis, GOLDEN["quat_to_angle_axis_axis"], rtol=1e-10)
+    np.testing.assert_allclose(
+        angle, GOLDEN["quat_to_angle_axis_angle"], rtol=1e-10
+    )
+    np.testing.assert_allclose(
+        axis, GOLDEN["quat_to_angle_axis_axis"], rtol=1e-10
+    )
 
 
 def test_normalize_angle_golden():
     x = H.rng(606).uniform(-10, 10, size=12)
-    np.testing.assert_allclose(npt.normalize_angle(x), GOLDEN["normalize_angle"], rtol=1e-10)
+    np.testing.assert_allclose(
+        npt.normalize_angle(x), GOLDEN["normalize_angle"], rtol=1e-10
+    )
 
 
 # ─────────────────────────── property checks ────────────────────────────
@@ -53,13 +65,18 @@ def test_quat_mul_matches_scipy():
     q2 = H.random_unit_quats_wxyz(6, seed=22)
     got = npt.quat_mul(q1, q2)
     expected_xyzw = (
-        sRot.from_quat(q1[:, [1, 2, 3, 0]]) * sRot.from_quat(q2[:, [1, 2, 3, 0]])
+        sRot.from_quat(q1[:, [1, 2, 3, 0]])
+        * sRot.from_quat(q2[:, [1, 2, 3, 0]])
     ).as_quat()
     expected_wxyz = expected_xyzw[:, [3, 0, 1, 2]]
     # quaternion sign ambiguity: compare up to sign
     same = np.allclose(got, expected_wxyz, atol=1e-8)
     flipped = np.allclose(got, -expected_wxyz, atol=1e-8)
-    assert same or flipped or np.allclose(np.abs(got), np.abs(expected_wxyz), atol=1e-8)
+    assert (
+        same
+        or flipped
+        or np.allclose(np.abs(got), np.abs(expected_wxyz), atol=1e-8)
+    )
 
 
 def test_quat_rotate_matches_scipy():
@@ -78,7 +95,9 @@ def test_heading_inv_cancels_heading():
     identity = np.zeros_like(prod)
     identity[:, 0] = 1.0
     # up to sign
-    assert np.allclose(prod, identity, atol=1e-8) or np.allclose(prod, -identity, atol=1e-8)
+    assert np.allclose(prod, identity, atol=1e-8) or np.allclose(
+        prod, -identity, atol=1e-8
+    )
 
 
 def test_quat_conjugate_inverts_rotation():
@@ -115,5 +134,9 @@ def test_quat_to_tan_norm_shape_and_unit():
     q = H.random_unit_quats_wxyz(7, seed=99)
     tn = npt.quat_to_tan_norm(q)
     assert tn.shape == (7, 6)
-    np.testing.assert_allclose(np.linalg.norm(tn[:, :3], axis=-1), 1.0, atol=1e-8)
-    np.testing.assert_allclose(np.linalg.norm(tn[:, 3:], axis=-1), 1.0, atol=1e-8)
+    np.testing.assert_allclose(
+        np.linalg.norm(tn[:, :3], axis=-1), 1.0, atol=1e-8
+    )
+    np.testing.assert_allclose(
+        np.linalg.norm(tn[:, 3:], axis=-1), 1.0, atol=1e-8
+    )

@@ -2,6 +2,7 @@
 """
 Скачивает датасет KIT с Hugging Face (N1ksw1r/KIT) в папку data/KIT.
 """
+
 import argparse
 from pathlib import Path
 
@@ -11,7 +12,9 @@ REPO_ID = "N1ksw1r/KIT"
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Скачать KIT датасет с Hugging Face в data/KIT")
+    parser = argparse.ArgumentParser(
+        description="Скачать KIT датасет с Hugging Face в data/KIT"
+    )
     parser.add_argument(
         "--data-dir",
         type=Path,

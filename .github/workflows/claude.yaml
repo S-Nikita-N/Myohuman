@@ -1,0 +1,62 @@
+name: Claude Code
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+jobs:
+  claude:
+    # Two gates on WHO triggers and on WHOSE content the agent then reads:
+    #   1. the trigger author (commenter / reviewer / issue opener) must be
+    #      owner / member / collaborator.
+    #   2. the content author must be trusted too. issue_comment gates BOTH the
+    #      commenter AND the issue/PR author, so the agent only acts on issues
+    #      and PR conversation comments opened by a trusted account (this event
+    #      carries no fork field). The PR-review events additionally require a
+    #      same-repo head (pull_request.head.repo.fork == false).
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)) ||
+      (github.event_name == 'pull_request_review_comment' && github.event.pull_request.head.repo.fork == false && contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review' && github.event.pull_request.head.repo.fork == false && contains(github.event.review.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association)) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # needed for `gh pr create` to open the PR
+      issues: read
+      id-token: write
+      actions: read # Required for Claude to read CI results on PRs
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        env:
+          # gh CLI reads this token to open the PR (pull-requests: write above).
+          GH_TOKEN: ${{ github.token }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # This is an optional setting that allows Claude to read CI results on PRs
+          additional_permissions: |
+            actions: read
+          # Allowlist: install + the full pre-commit gate + `uv run python`
+          # (run the app / ad-hoc scripts while resolving a task) + opening a
+          # PR. No bare `uv run` catch-all (that would allow `uv run --with
+          # <pkg>`). After resolving an issue on a branch, open (never merge) a
+          # PR into main; branch protection (1 approval + CI) stays the real
+          # gate.
+          claude_args: |
+            --allowed-tools "Bash(uv sync:*),Bash(uv run pre-commit run:*),Bash(uv run pytest:*),Bash(uv run ruff:*),Bash(uv run mypy:*),Bash(uv run python:*),Bash(gh pr create:*)"
+            --append-system-prompt "When you have committed and pushed a branch that resolves an issue, open a pull request into main with `gh pr create --base main --head <your-branch>`, giving it a clear title and a body that references the issue. Never merge the PR — leave review and merge to a human."

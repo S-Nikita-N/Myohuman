@@ -8,6 +8,7 @@ The tests compare live outputs against these files; regenerating them
 after an unintended change would mask a regression. Review the git diff
 of the .npz files before committing.
 """
+
 import sys
 from pathlib import Path
 
@@ -28,7 +29,9 @@ OUT = H.GOLDEN_DIR
 
 
 def save(name, **arrays):
-    np.savez(OUT / f"{name}.npz", **{k: np.asarray(v) for k, v in arrays.items()})
+    np.savez(
+        OUT / f"{name}.npz", **{k: np.asarray(v) for k, v in arrays.items()}
+    )
     print(f"wrote {name}.npz  ({', '.join(arrays)})")
 
 
@@ -40,7 +43,11 @@ def gen_np_transform():
     axis = H.random_vectors(6, seed=505)
     save(
         "np_transform",
-        q=q, q2=q2, v=v, angle=angle, axis=axis,
+        q=q,
+        q2=q2,
+        v=v,
+        angle=angle,
+        axis=axis,
         quat_rotate=npt.quat_rotate(q, v),
         quat_mul=npt.quat_mul(q, q2),
         quat_conjugate=npt.quat_conjugate(q),
@@ -53,28 +60,45 @@ def gen_np_transform():
         quat_to_angle_axis_angle=npt.quat_to_angle_axis(q)[0],
         quat_to_angle_axis_axis=npt.quat_to_angle_axis(q)[1],
         quat_to_exp_map=npt.quat_to_exp_map(q),
-        normalize_angle=npt.normalize_angle(H.rng(606).uniform(-10, 10, size=12)),
+        normalize_angle=npt.normalize_angle(
+            H.rng(606).uniform(-10, 10, size=12)
+        ),
     )
 
 
 def gen_imitation_reward():
     body_pos, body_vel, ref_pos, ref_vel = H.imitation_reward_inputs()
     r_uniform, raw_u = compute_imitation_reward(
-        body_pos, body_vel, ref_pos, ref_vel, H.REWARD_SPECS, body_weights=None,
+        body_pos,
+        body_vel,
+        ref_pos,
+        ref_vel,
+        H.REWARD_SPECS,
+        body_weights=None,
     )
     w = H.rng(1234).uniform(0.5, 2.0, size=H.NUM_TRACKED_BODIES)
     w = w / w.sum()
     r_weighted, raw_w = compute_imitation_reward(
-        body_pos, body_vel, ref_pos, ref_vel, H.REWARD_SPECS, body_weights=w,
+        body_pos,
+        body_vel,
+        ref_pos,
+        ref_vel,
+        H.REWARD_SPECS,
+        body_weights=w,
     )
     save(
         "imitation_reward",
-        body_pos=body_pos, body_vel=body_vel, ref_pos=ref_pos, ref_vel=ref_vel,
+        body_pos=body_pos,
+        body_vel=body_vel,
+        ref_pos=ref_pos,
+        ref_vel=ref_vel,
         body_weights=w,
         reward_uniform=r_uniform,
-        r_body_pos_uniform=raw_u["r_body_pos"], r_vel_uniform=raw_u["r_vel"],
+        r_body_pos_uniform=raw_u["r_body_pos"],
+        r_vel_uniform=raw_u["r_vel"],
         reward_weighted=r_weighted,
-        r_body_pos_weighted=raw_w["r_body_pos"], r_vel_weighted=raw_w["r_vel"],
+        r_body_pos_weighted=raw_w["r_body_pos"],
+        r_vel_weighted=raw_w["r_vel"],
     )
 
 
@@ -100,12 +124,17 @@ def gen_reset():
     per_body = np.full(H.NUM_TRACKED_BODIES, 0.15)
     save(
         "im_reset",
-        body=body, ref_close=ref_close, ref_far=ref_far, per_body_thresh=per_body,
+        body=body,
+        ref_close=ref_close,
+        ref_far=ref_far,
+        per_body_thresh=per_body,
         close_max=compute_humanoid_im_reset(body, ref_close, 0.15, False),
         close_mean=compute_humanoid_im_reset(body, ref_close, 0.15, True),
         far_max=compute_humanoid_im_reset(body, ref_far, 0.15, False),
         far_mean=compute_humanoid_im_reset(body, ref_far, 0.15, True),
-        far_max_perbody=compute_humanoid_im_reset(body, ref_far, per_body, False),
+        far_max_perbody=compute_humanoid_im_reset(
+            body, ref_far, per_body, False
+        ),
     )
 
 
@@ -114,7 +143,9 @@ def gen_self_obs():
     obs = compute_self_observations(body_pos, body_rot, body_vel, body_ang_vel)
     save(
         "self_obs",
-        body_pos=body_pos, body_rot=body_rot, body_vel=body_vel,
+        body_pos=body_pos,
+        body_rot=body_rot,
+        body_vel=body_vel,
         body_ang_vel=body_ang_vel,
         root_h_obs=obs["root_h_obs"],
         local_body_pos=obs["local_body_pos"],

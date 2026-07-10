@@ -11,7 +11,7 @@ from pathlib import Path
 from easydict import EasyDict
 from collections import OrderedDict
 from omegaconf import DictConfig
-from typing import Dict, Iterator, Optional, Tuple
+from collections.abc import Iterator
 from scipy.spatial.transform import Rotation as sRot
 
 from myohuman.env.myohuman_task import MyoHumanTask
@@ -25,25 +25,24 @@ logger = logging.getLogger(__name__)
 
 
 MYOHUMAN_TRACKED_BODIES = [
-    "root",      # Таз
-    "tibia_l",   # Левая голень
-    "tibia_r",   # Правая голень
-    "talus_l",   # Левая лодыжка
-    "talus_r",   # Правая лодыжка
-    "toes_l",    # Левые пальцы стопы
-    "toes_r",    # Правые пальцы стопы
-    "head",       # Голова
-    "humerus_r",    # Правая плечевая кость
-    "radius_r",     # Правое предплечье
-    "lunate_r",     # Правое запятье
-    'humerus_l',  # Левая плечевая кость
-    'radius_l',   # Левое предплечье
-    'lunate_l',   # Левое запястье
+    "root",  # Таз
+    "tibia_l",  # Левая голень
+    "tibia_r",  # Правая голень
+    "talus_l",  # Левая лодыжка
+    "talus_r",  # Правая лодыжка
+    "toes_l",  # Левые пальцы стопы
+    "toes_r",  # Правые пальцы стопы
+    "head",  # Голова
+    "humerus_r",  # Правая плечевая кость
+    "radius_r",  # Правое предплечье
+    "lunate_r",  # Правое запятье
+    "humerus_l",  # Левая плечевая кость
+    "radius_l",  # Левое предплечье
+    "lunate_l",  # Левое запястье
 ]
 
 
 class MyoHumanIm(MyoHumanTask):
-
     def __init__(self, cfg):
         self.initial_pose = None
         self.previous_pose = None
@@ -114,7 +113,9 @@ class MyoHumanIm(MyoHumanTask):
             - ``self._num_total_motions``— total number of motions
         """
         if not os.path.exists(self.initial_pose_file):
-            logger.warning("!!! Reference data file not found: %s", self.initial_pose_file)
+            logger.warning(
+                "!!! Reference data file not found: %s", self.initial_pose_file
+            )
             self.initial_pos_data = {}
             self._motion_metadata = {}
             self._all_motion_ids = np.array([], dtype=int)
@@ -141,9 +142,10 @@ class MyoHumanIm(MyoHumanTask):
                 raise FileNotFoundError(
                     f"motion_ids_file not found: {self.motion_ids_file}"
                 )
-            with open(self.motion_ids_file, "r") as f:
+            with open(self.motion_ids_file) as f:
                 file_ids = {
-                    int(line.strip()) for line in f
+                    int(line.strip())
+                    for line in f
                     if line.strip() and not line.startswith("#")
                 }
             n_before = len(all_ids)
@@ -156,7 +158,9 @@ class MyoHumanIm(MyoHumanTask):
             all_ids = all_ids & file_ids
             logger.info(
                 "Filtered by motion_ids_file: %d → %d motions (%s)",
-                n_before, len(all_ids), self.motion_ids_file,
+                n_before,
+                len(all_ids),
+                self.motion_ids_file,
             )
 
         self._all_motion_ids = np.array(sorted(all_ids), dtype=int)
@@ -165,7 +169,8 @@ class MyoHumanIm(MyoHumanTask):
 
         logger.info(
             "Loaded reference data: %d motions from %s",
-            self._num_total_motions, self.initial_pose_file,
+            self._num_total_motions,
+            self.initial_pose_file,
         )
 
     def setup_reference_model(self) -> None:
@@ -190,7 +195,7 @@ class MyoHumanIm(MyoHumanTask):
         """
         Initializes storage for biomechanical data recording.
 
-        If `self.recording_biomechanics` is True, prepares lists to store 
+        If `self.recording_biomechanics` is True, prepares lists to store
         biomechanical data.
 
         Sets:
@@ -219,7 +224,7 @@ class MyoHumanIm(MyoHumanTask):
         """
         Creates visual representations of tracked bodies in the task.
 
-        Adds visual capsules to the viewer and renderer scenes for each tracked body. 
+        Adds visual capsules to the viewer and renderer scenes for each tracked body.
         Capsules are color-coded for differentiation, with red and blue indicating different roles.
         """
         if self.viewer is not None:  # this implies that headless == False
@@ -253,9 +258,10 @@ class MyoHumanIm(MyoHumanTask):
         """
         Updates the positions of visualized tracked bodies in the scene.
 
-        Synchronizes visual objects in the viewer and renderer with the current 
+        Synchronizes visual objects in the viewer and renderer with the current
         task state, using positions from the motion library and simulation.
         """
+
         def draw_obj(scene):
             ref_dict = self.get_state_from_motionlib_cache(
                 (self.cur_t) * self.dt + self._motion_start_time
@@ -277,7 +283,7 @@ class MyoHumanIm(MyoHumanTask):
         """
         Configures body tracking and reset properties for MyoLeg.
 
-        Initializes lists of tracked and resettable bodies, as well as their 
+        Initializes lists of tracked and resettable bodies, as well as their
         corresponding indices based on the original body names.
 
         Sets:
@@ -291,14 +297,14 @@ class MyoHumanIm(MyoHumanTask):
         self.full_tracked_bodies = self.body_names
         self.tracked_bodies = MYOHUMAN_TRACKED_BODIES
         self.reset_bodies = self.tracked_bodies
-        
+
         self.tracked_bodies_id = [
             self.body_names.index(j) for j in self.tracked_bodies
         ]
 
         raw_weights = self.cfg.env.get("body_reward_weights", None)
         if raw_weights is not None:
-            if hasattr(raw_weights, 'items'):
+            if hasattr(raw_weights, "items"):
                 w = np.ones(len(self.tracked_bodies), dtype=np.float64)
                 for name, val in raw_weights.items():
                     assert name in self.tracked_bodies, (
@@ -314,14 +320,23 @@ class MyoHumanIm(MyoHumanTask):
             self.body_reward_weights = w / w.sum()
             logger.info(
                 "Per-body reward weights: %s",
-                {b: f"{v:.3f}" for b, v in zip(self.tracked_bodies, self.body_reward_weights)},
+                {
+                    b: f"{v:.3f}"
+                    for b, v in zip(
+                        self.tracked_bodies, self.body_reward_weights
+                    )
+                },
             )
         else:
             self.body_reward_weights = None
 
         raw_term = self.cfg.env.get("body_termination_distance", None)
         if raw_term is not None:
-            arr = np.full(len(self.reset_bodies), self.termination_distance, dtype=np.float64)
+            arr = np.full(
+                len(self.reset_bodies),
+                self.termination_distance,
+                dtype=np.float64,
+            )
             for name, dist in raw_term.items():
                 assert name in self.reset_bodies, (
                     f"body_termination_distance: unknown body '{name}'. "
@@ -348,11 +363,16 @@ class MyoHumanIm(MyoHumanTask):
         num_to_sample = min(self.num_motion_max, self._num_total_motions)
         if self.random_sample:
             self._active_motion_ids = np.random.choice(
-                self._all_motion_ids, size=num_to_sample, replace=False,
+                self._all_motion_ids,
+                size=num_to_sample,
+                replace=False,
             )
         else:
             start = self.motion_start_idx
-            indices = np.arange(start, start + num_to_sample) % self._num_total_motions
+            indices = (
+                np.arange(start, start + num_to_sample)
+                % self._num_total_motions
+            )
             self._active_motion_ids = self._all_motion_ids[indices]
 
         # Initial values (will be updated in reset)
@@ -373,8 +393,8 @@ class MyoHumanIm(MyoHumanTask):
         """
         Initializes the MyoHuman environment state.
 
-        This function sets up the initial state of the simulation, including position, velocity, 
-        and kinematics, using motion library data and cached or precomputed initial poses. 
+        This function sets up the initial state of the simulation, including position, velocity,
+        and kinematics, using motion library data and cached or precomputed initial poses.
         It also initializes evaluation metrics and biomechanical recording if enabled.
         """
         super().init_myohuman()
@@ -396,10 +416,12 @@ class MyoHumanIm(MyoHumanTask):
         motion_id = self._sampled_motion_id
 
         # Look up stored IK solution for this frame
-        ref_qpos = self._lookup_reference_qpos(motion_id, self._motion_start_time)
+        ref_qpos = self._lookup_reference_qpos(
+            motion_id, self._motion_start_time
+        )
         headed_qpos = self._apply_heading(ref_qpos.copy())
 
-        self.mj_data.qpos[:len(headed_qpos)] = headed_qpos
+        self.mj_data.qpos[: len(headed_qpos)] = headed_qpos
 
         # Velocity from finite differences of two neighbouring frames
         if self._motion_start_time > 0:
@@ -408,8 +430,11 @@ class MyoHumanIm(MyoHumanTask):
             )
             prev_headed = self._apply_heading(prev_qpos.copy())
             mujoco.mj_differentiatePos(
-                self.mj_model, self.mj_data.qvel, self.dt,
-                prev_headed, headed_qpos,
+                self.mj_model,
+                self.mj_data.qvel,
+                self.dt,
+                prev_headed,
+                headed_qpos,
             )
         else:
             self.mj_data.qvel[:] = 0
@@ -419,7 +444,7 @@ class MyoHumanIm(MyoHumanTask):
 
         mujoco.mj_kinematics(self.mj_model, self.mj_data)
 
-    def get_termination_stats(self) -> Dict[str, dict]:
+    def get_termination_stats(self) -> dict[str, dict]:
         """Returns per-body termination stats (count + mean dist) and resets."""
         counts = getattr(self, "_termination_counts", {})
         dists = getattr(self, "_termination_dists", {})
@@ -431,7 +456,7 @@ class MyoHumanIm(MyoHumanTask):
                 "caused": c,
                 "mean_dist": float(np.mean(d)) if d else 0.0,
             }
-        self._termination_counts = {b: 0 for b in self.reset_bodies}
+        self._termination_counts = dict.fromkeys(self.reset_bodies, 0)
         self._termination_dists = {b: [] for b in self.reset_bodies}
         return stats
 
@@ -449,13 +474,50 @@ class MyoHumanIm(MyoHumanTask):
         self.joint_pos.append(np.full(self.get_qpos().shape, np.nan))
         self.joint_vel.append(np.full(self.get_qvel().shape, np.nan))
         self.body_pos.append(np.full(self.get_body_xpos()[None,].shape, np.nan))
-        self.body_rot.append(np.full(self.get_body_xquat()[None,][..., self.tracked_bodies_id, :].shape, np.nan))
-        self.body_vel.append(np.full(self.get_body_linear_vel()[None,][..., self.tracked_bodies_id, :].shape, np.nan))
-        self.ref_pos.append(np.full(self.get_body_xpos()[None,][..., self.tracked_bodies_id, :].shape, np.nan))
-        self.ref_rot.append(np.full(self.get_body_xquat()[None,][..., self.tracked_bodies_id, :].shape, np.nan))
-        self.ref_vel.append(np.full(self.get_body_linear_vel()[None,][..., self.tracked_bodies_id, :].shape, np.nan))
+        self.body_rot.append(
+            np.full(
+                self.get_body_xquat()[None,][
+                    ..., self.tracked_bodies_id, :
+                ].shape,
+                np.nan,
+            )
+        )
+        self.body_vel.append(
+            np.full(
+                self.get_body_linear_vel()[None,][
+                    ..., self.tracked_bodies_id, :
+                ].shape,
+                np.nan,
+            )
+        )
+        self.ref_pos.append(
+            np.full(
+                self.get_body_xpos()[None,][
+                    ..., self.tracked_bodies_id, :
+                ].shape,
+                np.nan,
+            )
+        )
+        self.ref_rot.append(
+            np.full(
+                self.get_body_xquat()[None,][
+                    ..., self.tracked_bodies_id, :
+                ].shape,
+                np.nan,
+            )
+        )
+        self.ref_vel.append(
+            np.full(
+                self.get_body_linear_vel()[None,][
+                    ..., self.tracked_bodies_id, :
+                ].shape,
+                np.nan,
+            )
+        )
         self.motion_id.append(np.nan)
-        self.muscle_forces.append(np.full(self.get_muscle_force().shape, np.nan))
+        self.muscle_forces.append(
+            np.full(self.get_muscle_force().shape, np.nan)
+        )
         self.muscle_controls.append(np.full(self.mj_data.ctrl.shape, np.nan))
         self.policy_outputs.append(np.full(self.mj_data.ctrl.shape, np.nan))
 
@@ -463,8 +525,8 @@ class MyoHumanIm(MyoHumanTask):
         """
         Calculates the size of the task observation vector based on configured inputs.
 
-        This function sums up the dimensions of the observation components specified 
-        in `self.cfg.run.task_inputs`. Each component contributes to the observation size 
+        This function sums up the dimensions of the observation components specified
+        in `self.cfg.run.task_inputs`. Each component contributes to the observation size
         based on the number of tracked bodies and its dimensionality (e.g., 3 for position or velocity).
 
         Returns:
@@ -485,13 +547,13 @@ class MyoHumanIm(MyoHumanTask):
 
         return obs_size
 
-    def compute_reset(self) -> Tuple[bool, bool]:
+    def compute_reset(self) -> tuple[bool, bool]:
         """
         Determines whether the task should reset based on termination and truncation conditions.
 
-        This function checks if the task should terminate early due to positional deviation 
-        from reference motions (termination) or if the task duration has exceeded the 
-        motion length (truncation). If either condition is met, evaluation metrics are computed 
+        This function checks if the task should terminate early due to positional deviation
+        from reference motions (termination) or if the task duration has exceeded the
+        motion length (truncation). If either condition is met, evaluation metrics are computed
         and reset.
 
         Returns:
@@ -503,9 +565,7 @@ class MyoHumanIm(MyoHumanTask):
             - Calls `compute_evaluation_metrics` and `reset_evaluation_metrics` if reset conditions are met.
         """
         terminated, truncated = False, False
-        sim_time = (
-            (self.cur_t) * self.dt + self._motion_start_time
-        )
+        sim_time = (self.cur_t) * self.dt + self._motion_start_time
         ref_dict = self.get_state_from_motionlib_cache(sim_time)
         body_pos = self.get_body_xpos()[None,]
         body_pos_subset = body_pos[..., self.reset_bodies_id, :]
@@ -521,9 +581,7 @@ class MyoHumanIm(MyoHumanTask):
             termination_distance=term_dist,
             use_mean=True if self.im_eval else False,
         )[0]
-        truncated = (
-            sim_time > self.get_motion_length(self._sampled_motion_id)
-        )
+        truncated = sim_time > self.get_motion_length(self._sampled_motion_id)
 
         if terminated:
             per_body_dist = np.linalg.norm(
@@ -533,7 +591,7 @@ class MyoHumanIm(MyoHumanTask):
             self.last_termination_body = self.reset_bodies[worst_idx]
             self.last_termination_dist = per_body_dist
             if not hasattr(self, "_termination_counts"):
-                self._termination_counts = {b: 0 for b in self.reset_bodies}
+                self._termination_counts = dict.fromkeys(self.reset_bodies, 0)
                 self._termination_dists = {b: [] for b in self.reset_bodies}
             self._termination_counts[self.reset_bodies[worst_idx]] += 1
             for i, b in enumerate(self.reset_bodies):
@@ -549,8 +607,8 @@ class MyoHumanIm(MyoHumanTask):
         """
         Computes evaluation metrics for the current simulation.
 
-        This function calculates the mean per-joint position error (MPJPE) and frame 
-        coverage for the simulation. The frame coverage 
+        This function calculates the mean per-joint position error (MPJPE) and frame
+        coverage for the simulation. The frame coverage
         indicates the proportion of the motion completed before termination or completion.
 
         Args:
@@ -565,13 +623,15 @@ class MyoHumanIm(MyoHumanTask):
         self.mpjpe_value = mpjpe_arr.mean()
         self.max_mpjpe_value = mpjpe_arr.max() if len(mpjpe_arr) > 0 else 0.0
         if terminated:
-            self.frame_coverage = sim_time / self.get_motion_length(self._sampled_motion_id)
+            self.frame_coverage = sim_time / self.get_motion_length(
+                self._sampled_motion_id
+            )
         else:
             self.frame_coverage = 1.0
         # Kinesis-style: success = episode did not early-terminate (completed or got truncated)
         self.last_success = not terminated
 
-    def reset_task(self, options: Optional[dict] = None) -> None:
+    def reset_task(self, options: dict | None = None) -> None:
         """
         Resets the task: picks a motion, generates heading, sets start time.
         """
@@ -594,7 +654,9 @@ class MyoHumanIm(MyoHumanTask):
         elif self.random_start:
             motion_id = self._sampled_motion_id
             if motion_id in self.initial_pos_data:
-                self._motion_start_time = self._sample_valid_start_time(motion_id)
+                self._motion_start_time = self._sample_valid_start_time(
+                    motion_id
+                )
 
         # ── Heading randomization (per-episode) ─────────────────────────
         if self._randomize_heading:
@@ -624,7 +686,9 @@ class MyoHumanIm(MyoHumanTask):
         """Returns the global motion ID (same as ``_sampled_motion_id``)."""
         return self._sampled_motion_id
 
-    def _lookup_reference_qpos(self, motion_id: int, motion_time: float) -> Optional[np.ndarray]:
+    def _lookup_reference_qpos(
+        self, motion_id: int, motion_time: float
+    ) -> np.ndarray | None:
         """
         Returns the IK-computed qpos for the closest cached frame of the given motion.
         """
@@ -658,7 +722,9 @@ class MyoHumanIm(MyoHumanTask):
 
         return self.ref_motion_cache
 
-    def _build_reference_state(self, motion_time: np.ndarray) -> Dict[str, np.ndarray]:
+    def _build_reference_state(
+        self, motion_time: np.ndarray
+    ) -> dict[str, np.ndarray]:
         """
         Populates the reference Mujoco data buffer using pre-computed IK poses
         (with heading applied) and returns derived body/muscle states.
@@ -668,15 +734,20 @@ class MyoHumanIm(MyoHumanTask):
         ref_qpos = self._lookup_reference_qpos(motion_id, motion_time)
         headed = self._apply_heading(ref_qpos.copy())
 
-        self.ref_data.qpos[:len(headed)] = headed
+        self.ref_data.qpos[: len(headed)] = headed
         self.ref_data.qvel[:] = 0
 
         if motion_time > 0:
-            prev_ref_qpos = self._lookup_reference_qpos(motion_id, motion_time - self.dt)
+            prev_ref_qpos = self._lookup_reference_qpos(
+                motion_id, motion_time - self.dt
+            )
             prev_headed = self._apply_heading(prev_ref_qpos.copy())
             mujoco.mj_differentiatePos(
-                self.mj_model, self.ref_data.qvel, self.dt,
-                prev_headed, headed,
+                self.mj_model,
+                self.ref_data.qvel,
+                self.dt,
+                prev_headed,
+                headed,
             )
         mujoco.mj_forward(self.mj_model, self.ref_data)
 
@@ -695,13 +766,13 @@ class MyoHumanIm(MyoHumanTask):
         """
         Computes task-specific observations for the current simulation step.
 
-        This function calculates and returns the observation vector based on the 
-        current and reference states of the simulated bodies. It includes positional 
-        and velocity differences as well as reference positions, tailored to the 
+        This function calculates and returns the observation vector based on the
+        current and reference states of the simulated bodies. It includes positional
+        and velocity differences as well as reference positions, tailored to the
         configured task inputs.
 
         Returns:
-            np.ndarray: A concatenated array of task observations based on selected 
+            np.ndarray: A concatenated array of task observations based on selected
             input features. The array is flattened for compatibility with downstream models.
 
         Updates:
@@ -732,7 +803,9 @@ class MyoHumanIm(MyoHumanTask):
 
         ref_pos_subset = ref_dict.xpos[None,][..., self.tracked_bodies_id, :]
         ref_rot_subset = ref_dict.xquat[None,][..., self.tracked_bodies_id, :]
-        ref_body_vel_subset = ref_dict.body_vel[None,][..., self.tracked_bodies_id, :]
+        ref_body_vel_subset = ref_dict.body_vel[None,][
+            ..., self.tracked_bodies_id, :
+        ]
         ref_muscle_len = ref_dict.actuator_length
         ref_muscle_vel = ref_dict.actuator_velocity
 
@@ -743,7 +816,7 @@ class MyoHumanIm(MyoHumanTask):
                 body_vel_subset,
                 ref_pos_subset,
                 ref_rot_subset,
-                ref_body_vel_subset
+                ref_body_vel_subset,
             )
 
         full_task_obs = compute_imitation_observations(
@@ -762,21 +835,31 @@ class MyoHumanIm(MyoHumanTask):
 
         task_obs = {}
         if "diff_local_body_pos" in self.cfg.run.task_inputs:
-            task_obs["diff_local_body_pos"] = full_task_obs["diff_local_body_pos"]
+            task_obs["diff_local_body_pos"] = full_task_obs[
+                "diff_local_body_pos"
+            ]
         if "diff_local_vel" in self.cfg.run.task_inputs:
             task_obs["diff_local_vel"] = full_task_obs["diff_local_vel"]
         if "local_ref_body_pos" in self.cfg.run.task_inputs:
             task_obs["local_ref_body_pos"] = full_task_obs["local_ref_body_pos"]
         if "diff_muscle_len" in self.cfg.run.task_inputs:
-            task_obs["diff_muscle_len"] = full_task_obs['diff_muscle_len']
+            task_obs["diff_muscle_len"] = full_task_obs["diff_muscle_len"]
         if "diff_muscle_vel" in self.cfg.run.task_inputs:
-            task_obs["diff_muscle_vel"] = full_task_obs['diff_muscle_vel']
+            task_obs["diff_muscle_vel"] = full_task_obs["diff_muscle_vel"]
 
         return np.concatenate(
             [v.ravel() for v in task_obs.values()], axis=0, dtype=self.dtype
         )
 
-    def record_biomechanics(self, body_pos: np.ndarray, body_rot: np.ndarray, body_vel: np.ndarray, ref_pos: np.ndarray, ref_rot: np.ndarray, ref_vel: np.ndarray) -> None:
+    def record_biomechanics(
+        self,
+        body_pos: np.ndarray,
+        body_rot: np.ndarray,
+        body_vel: np.ndarray,
+        ref_pos: np.ndarray,
+        ref_rot: np.ndarray,
+        ref_vel: np.ndarray,
+    ) -> None:
         """
         Records biomechanical data for the current simulation step.
 
@@ -805,7 +888,9 @@ class MyoHumanIm(MyoHumanTask):
             planted_feet = 1
         if feet_contacts[2] > 0 or feet_contacts[3] > 0:
             planted_feet = 0
-        if (feet_contacts[0] > 0 or feet_contacts[1] > 0) and (feet_contacts[2] > 0 or feet_contacts[3] > 0):
+        if (feet_contacts[0] > 0 or feet_contacts[1] > 0) and (
+            feet_contacts[2] > 0 or feet_contacts[3] > 0
+        ):
             planted_feet = 2
         self.feet.append(planted_feet)
         self.joint_pos.append(self.get_qpos().copy())
@@ -820,7 +905,13 @@ class MyoHumanIm(MyoHumanTask):
         self.muscle_forces.append(self.get_muscle_force().copy())
         self.muscle_controls.append(self.mj_data.ctrl.copy())
 
-    def record_evaluation_metrics(self, body_pos: np.ndarray, ref_pos: np.ndarray, body_vel: np.ndarray, ref_vel: np.ndarray) -> None:
+    def record_evaluation_metrics(
+        self,
+        body_pos: np.ndarray,
+        ref_pos: np.ndarray,
+        body_vel: np.ndarray,
+        ref_vel: np.ndarray,
+    ) -> None:
         """
         Records evaluation metrics (MPJPE) for the current simulation step.
 
@@ -835,7 +926,9 @@ class MyoHumanIm(MyoHumanTask):
         """
         self.mpjpe.append(np.linalg.norm(body_pos - ref_pos, axis=-1).mean())
 
-    def compute_muscle_imitation_reward(self, ref_state: dict) -> Tuple[float, Dict[str, float]]:
+    def compute_muscle_imitation_reward(
+        self, ref_state: dict
+    ) -> tuple[float, dict[str, float]]:
         """
         Matches simulated muscle length/velocity to the IK reference.
         """
@@ -850,19 +943,21 @@ class MyoHumanIm(MyoHumanTask):
         w_vel = self.reward_specs.get("w_muscle_vel", 0.0)
 
         r_len = np.exp(-k_len * ((curr_lengths - ref_lengths) ** 2).mean())
-        r_vel = np.exp(-k_vel * ((curr_velocities - ref_velocities) ** 2).mean())
+        r_vel = np.exp(
+            -k_vel * ((curr_velocities - ref_velocities) ** 2).mean()
+        )
 
         reward = w_len * r_len + w_vel * r_vel
         reward_raw = {"r_muscle_len": r_len, "r_muscle_vel": r_vel}
         return reward, reward_raw
 
-    def compute_reward(self, action: Optional[np.ndarray] = None) -> float:
+    def compute_reward(self, action: np.ndarray | None = None) -> float:
         """
         Computes the reward for the current simulation step.
 
-        The reward is a combination of imitation reward, upright posture reward, 
-        and energy efficiency. It is calculated by comparing the current body state 
-        to the reference motion and includes weighted contributions based on the 
+        The reward is a combination of imitation reward, upright posture reward,
+        and energy efficiency. It is calculated by comparing the current body state
+        to the reference motion and includes weighted contributions based on the
         reward specifications.
 
         Args:
@@ -877,7 +972,9 @@ class MyoHumanIm(MyoHumanTask):
         ref_dict = self.get_state_from_motionlib_cache(
             (self.cur_t) * self.dt + self._motion_start_time
         )
-        muscle_reward, muscle_reward_raw = self.compute_muscle_imitation_reward(ref_dict)
+        muscle_reward, muscle_reward_raw = self.compute_muscle_imitation_reward(
+            ref_dict
+        )
 
         body_pos = self.get_body_xpos()[None,]
 
@@ -907,7 +1004,12 @@ class MyoHumanIm(MyoHumanTask):
         self.reward_info["energy_cost"] = energy_cost
         self.reward_info.update(muscle_reward_raw)
 
-        self.record_evaluation_metrics(body_pos_subset, ref_pos_subset, body_vel_subset, ref_body_vel_subset)
+        self.record_evaluation_metrics(
+            body_pos_subset,
+            ref_pos_subset,
+            body_vel_subset,
+            ref_body_vel_subset,
+        )
 
         return reward
 
@@ -954,11 +1056,9 @@ class MyoHumanIm(MyoHumanTask):
         qpos[:3] = self._heading_rot.apply(qpos[:3])
 
         # Compose heading with root quaternion (Mujoco wxyz format)
-        root_xyzw = qpos[np.array([4, 5, 6, 3])]              # wxyz → xyzw
-        new_xyzw = (
-            self._heading_rot * sRot.from_quat(root_xyzw)
-        ).as_quat()
-        qpos[3:7] = np.roll(new_xyzw, 1)                      # xyzw → wxyz
+        root_xyzw = qpos[np.array([4, 5, 6, 3])]  # wxyz → xyzw
+        new_xyzw = (self._heading_rot * sRot.from_quat(root_xyzw)).as_quat()
+        qpos[3:7] = np.roll(new_xyzw, 1)  # xyzw → wxyz
 
         return qpos
 
@@ -981,7 +1081,9 @@ class MyoHumanIm(MyoHumanTask):
         on the terminal step. Metrics are computed inside compute_reset() and
         remain on self until this point.
         """
-        obs, reward, terminated, truncated, info = super().post_physics_step(action)
+        obs, reward, terminated, truncated, info = super().post_physics_step(
+            action
+        )
         if terminated or truncated:
             info["mpjpe"] = float(self.mpjpe_value)
             info["max_mpjpe"] = float(self.max_mpjpe_value)
@@ -990,7 +1092,8 @@ class MyoHumanIm(MyoHumanTask):
         if terminated and hasattr(self, "last_termination_body"):
             info["termination_body"] = self.last_termination_body
             info["termination_dists"] = {
-                b: float(d) for b, d in zip(self.reset_bodies, self.last_termination_dist)
+                b: float(d)
+                for b, d in zip(self.reset_bodies, self.last_termination_dist)
             }
         return obs, reward, terminated, truncated, info
 
@@ -1013,7 +1116,9 @@ class MyoHumanIm(MyoHumanTask):
             self.policy_outputs.append(action)
 
         self.physics_step(action)
-        observation, reward, terminated, truncated, info = self.post_physics_step(action)
+        observation, reward, terminated, truncated, info = (
+            self.post_physics_step(action)
+        )
 
         if self.render_mode == "human":
             self.render()
@@ -1033,11 +1138,11 @@ def compute_imitation_observations(
     ref_muscle_len: np.ndarray,
     ref_muscle_vel: np.ndarray,
     time_steps: int,
-) -> Dict[str, np.ndarray]:
+) -> dict[str, np.ndarray]:
     """
     Computes imitation observations based on differences between current and reference states.
 
-    Observations include local differences in body positions and velocities, 
+    Observations include local differences in body positions and velocities,
     as well as local reference positions relative to the root.
 
     Args:
@@ -1065,33 +1170,34 @@ def compute_imitation_observations(
         (time_steps, 1, 1),
     )
 
-    diff_global_body_pos = ref_body_pos.reshape(B, time_steps, J, 3) - body_pos.reshape(
-        B, 1, J, 3
-    )
+    diff_global_body_pos = ref_body_pos.reshape(
+        B, time_steps, J, 3
+    ) - body_pos.reshape(B, 1, J, 3)
 
     diff_local_body_pos_flat = npt_utils.quat_rotate(
-        heading_inv_rot_expand.reshape(-1, 4), diff_global_body_pos.reshape(-1, 3)
+        heading_inv_rot_expand.reshape(-1, 4),
+        diff_global_body_pos.reshape(-1, 3),
     )
 
     obs["diff_local_body_pos"] = diff_local_body_pos_flat  # 1 * J * 3
 
     # Velocities
-    diff_global_vel = ref_body_vel.reshape(B, time_steps, J, 3) - body_vel.reshape(
-        B, 1, J, 3
-    )
+    diff_global_vel = ref_body_vel.reshape(
+        B, time_steps, J, 3
+    ) - body_vel.reshape(B, 1, J, 3)
     obs["diff_local_vel"] = npt_utils.quat_rotate(
         heading_inv_rot_expand.reshape(-1, 4), diff_global_vel.reshape(-1, 3)
     )
 
-    local_ref_body_pos = ref_body_pos.reshape(B, time_steps, J, 3) - root_pos.reshape(
-        B, 1, 1, 3
-    )  # preserves the body position
+    local_ref_body_pos = ref_body_pos.reshape(
+        B, time_steps, J, 3
+    ) - root_pos.reshape(B, 1, 1, 3)  # preserves the body position
     obs["local_ref_body_pos"] = npt_utils.quat_rotate(
         heading_inv_rot_expand.reshape(-1, 4), local_ref_body_pos.reshape(-1, 3)
     )
-    
-    obs['diff_muscle_len'] = ref_muscle_len - muscle_len
-    obs['diff_muscle_vel'] = ref_muscle_vel - muscle_vel
+
+    obs["diff_muscle_len"] = ref_muscle_len - muscle_len
+    obs["diff_muscle_vel"] = ref_muscle_vel - muscle_vel
 
     return obs
 
@@ -1102,8 +1208,8 @@ def compute_imitation_reward(
     ref_body_pos: np.ndarray,
     ref_body_vel: np.ndarray,
     rwd_specs: dict,
-    body_weights: Optional[np.ndarray] = None,
-) -> Tuple[float, Dict[str, np.ndarray]]:
+    body_weights: np.ndarray | None = None,
+) -> tuple[float, dict[str, np.ndarray]]:
     """
     Computes the imitation reward based on differences in positions and velocities
     between the current and reference states.
@@ -1131,7 +1237,9 @@ def compute_imitation_reward(
 
     # body position reward — per-body squared error, then (weighted) mean over bodies
     diff_global_body_pos = ref_body_pos - body_pos
-    per_body_pos_err = (diff_global_body_pos**2).mean(axis=-1)  # (..., num_bodies)
+    per_body_pos_err = (diff_global_body_pos**2).mean(
+        axis=-1
+    )  # (..., num_bodies)
     if body_weights is not None:
         diff_body_pos_dist = (per_body_pos_err * body_weights).sum(axis=-1)
     else:
@@ -1176,8 +1284,10 @@ def compute_humanoid_im_reset(
 
     if use_mean:
         has_fallen = np.any(
-            per_body_dist.mean(axis=-1, keepdims=True) > (
-                np.mean(termination_distance) if isinstance(termination_distance, np.ndarray)
+            per_body_dist.mean(axis=-1, keepdims=True)
+            > (
+                np.mean(termination_distance)
+                if isinstance(termination_distance, np.ndarray)
                 else termination_distance
             ),
             axis=-1,

@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"MANDATORY FIRST STEP: on ANY question or task about THIS repository, you MUST first obtain the full repository state by invoking the explore-codebase skill — before answering or acting. Never answer a repo question from partial or grep-only context. The skill runs the repo map, has you reflect on it, and read the key files. Re-invoke it whenever you need to refresh the whole-repo view.\"}}'"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SubagentStart\",\"additionalContext\":\"You are a subagent starting fresh. If your task needs an understanding of this repository beyond the specific files named in your prompt, invoke the explore-codebase skill first to build the whole-repo picture (run the map AND reflect), then proceed.\"}}'"
+          }
+        ]
+      }
+    ]
+  }
+}

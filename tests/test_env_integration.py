@@ -6,6 +6,7 @@ Pins observation sizes, reset state, heading math, motion bookkeeping and a
 deterministic reward/step snapshot. np.random is seeded and heading
 randomization disabled so runs are reproducible.
 """
+
 import numpy as np
 import joblib
 import mujoco
@@ -21,25 +22,55 @@ DT = 5 / 150  # control_frequency_inv / sim_timestep_inv == 1/30
 
 def _make_cfg(pose_file, **overrides):
     run = dict(
-        headless=True, fast_forward=True, control_mode="direct",
-        xml_path=str(H.XML_PATH), initial_pose_file=str(pose_file),
-        motion_id=0, im_eval=False, test=True, num_motions=1,
-        random_sample=False, random_start=False, recording_biomechanics=False,
+        headless=True,
+        fast_forward=True,
+        control_mode="direct",
+        xml_path=str(H.XML_PATH),
+        initial_pose_file=str(pose_file),
+        motion_id=0,
+        im_eval=False,
+        test=True,
+        num_motions=1,
+        random_sample=False,
+        random_start=False,
+        recording_biomechanics=False,
         motion_ids_file=None,
         proprioceptive_inputs=[
-            "root_height", "root_tilt", "local_body_pos", "local_body_rot",
-            "local_body_vel", "local_body_ang_vel", "feet_contacts",
+            "root_height",
+            "root_tilt",
+            "local_body_pos",
+            "local_body_rot",
+            "local_body_vel",
+            "local_body_ang_vel",
+            "feet_contacts",
         ],
-        task_inputs=["diff_local_body_pos", "diff_local_vel", "local_ref_body_pos"],
+        task_inputs=[
+            "diff_local_body_pos",
+            "diff_local_vel",
+            "local_ref_body_pos",
+        ],
     )
     run.update(overrides)
     env = dict(
-        sim_timestep_inv=150, control_frequency_inv=5, kp_scale=1.0, kd_scale=1.0,
-        clip_actions=True, resampling_interval=100, termination_distance=0.15,
-        body_termination_distance=None, body_reward_weights=None,
+        sim_timestep_inv=150,
+        control_frequency_inv=5,
+        kp_scale=1.0,
+        kd_scale=1.0,
+        clip_actions=True,
+        resampling_interval=100,
+        termination_distance=0.15,
+        body_termination_distance=None,
+        body_reward_weights=None,
         reward_specs=dict(
-            k_pos=200, k_vel=5, k_muscle_len=2000, k_muscle_vel=20,
-            w_pos=0.7, w_vel=0.3, w_energy=0.002, w_muscle_len=0, w_muscle_vel=0,
+            k_pos=200,
+            k_vel=5,
+            k_muscle_len=2000,
+            k_muscle_vel=20,
+            w_pos=0.7,
+            w_vel=0.3,
+            w_energy=0.002,
+            w_muscle_len=0,
+            w_muscle_vel=0,
         ),
     )
     return OmegaConf.create({"run": run, "env": env})
@@ -65,7 +96,9 @@ def pose_file(tmp_path_factory, nq):
     length = (num_frames - 1) * DT
     data = {
         "frames": {0: frames},
-        "metadata": {0: {"length": length, "dt": DT, "fps": 30, "num_frames": num_frames}},
+        "metadata": {
+            0: {"length": length, "dt": DT, "fps": 30, "num_frames": num_frames}
+        },
     }
     path = tmp_path_factory.mktemp("ik") / "ik_tiny.pkl"
     joblib.dump(data, path)
@@ -192,10 +225,13 @@ def test_compute_energy_reward_available_on_base_env():
     # compute_energy_reward now lives on MyoHumanEnv, so base physics_step works.
     from myohuman.env.myohuman_env import MyoHumanEnv
     from myohuman.env.myohuman_im import MyoHumanIm
+
     assert hasattr(MyoHumanEnv, "compute_energy_reward")
     # MyoHumanIm inherits the same implementation (no override)
     assert MyoHumanIm.compute_energy_reward is MyoHumanEnv.compute_energy_reward
-    assert MyoHumanEnv.compute_energy_reward(None, np.array([3.0, 4.0])) == pytest.approx(12.0)
+    assert MyoHumanEnv.compute_energy_reward(
+        None, np.array([3.0, 4.0])
+    ) == pytest.approx(12.0)
 
 
 def test_start_end_eval_toggle_flags(env):

@@ -5,7 +5,6 @@ import numpy as np
 import gymnasium as gym
 import myohuman.utils.np_transform_utils as npt_utils
 
-from typing import Tuple
 from collections import OrderedDict
 from scipy.spatial.transform import Rotation as sRot
 from myohuman.env.myohuman_base import BaseEnv
@@ -19,18 +18,16 @@ class MyoHumanEnv(BaseEnv):
         super().__init__(cfg=self.cfg)
         self.setup_configs(cfg)
 
-        self.create_sim(
-            cfg.run.xml_path
-        )
+        self.create_sim(cfg.run.xml_path)
         self.setup_myohuman_params()
         self.reward_info = {}
-        
+
         self.observation_space = gym.spaces.Box(
             -np.inf * np.ones(self.get_obs_size()),
             np.inf * np.ones(self.get_obs_size()),
             dtype=self.dtype,
         )
-        
+
         self.action_space = gym.spaces.Box(
             low=-np.ones(self.get_action_size()),
             high=np.ones(self.get_action_size()),
@@ -75,13 +72,21 @@ class MyoHumanEnv(BaseEnv):
             self.mj_body_names.index(name) for name in self.body_names
         ]
 
-        self.qpos_lim = np.max(self.mj_model.jnt_qposadr) + self.mj_model.jnt_qposadr[-1] - self.mj_model.jnt_qposadr[-2]
-        self.qvel_lim = np.max(self.mj_model.jnt_dofadr) + self.mj_model.jnt_dofadr[-1] - self.mj_model.jnt_dofadr[-2]
-        
+        self.qpos_lim = (
+            np.max(self.mj_model.jnt_qposadr)
+            + self.mj_model.jnt_qposadr[-1]
+            - self.mj_model.jnt_qposadr[-2]
+        )
+        self.qvel_lim = (
+            np.max(self.mj_model.jnt_dofadr)
+            + self.mj_model.jnt_dofadr[-1]
+            - self.mj_model.jnt_dofadr[-2]
+        )
+
         # These are not required but are included for future reference
         geom_type_id = mujoco.mju_str2Type("geom")
         self.floor_idx = mujoco.mj_name2id(self.mj_model, geom_type_id, "floor")
-    
+
     def get_obs_size(self) -> int:
         """
         Returns the size of the observations. In the environment class, this defaults to the size of the proprioceptive observations.
@@ -100,10 +105,10 @@ class MyoHumanEnv(BaseEnv):
         """
         obs = self.compute_proprioception()
         return obs
-    
+
     def compute_info(self):
         raise NotImplementedError
-    
+
     def get_self_obs_size(self) -> int:
         """
         Returns the size of the proprioceptive observations.
@@ -137,7 +142,7 @@ class MyoHumanEnv(BaseEnv):
         """
         Computes proprioceptive observations for the current simulation state.
 
-        Updates the humanoid's body and actuator states, and generates observations 
+        Updates the humanoid's body and actuator states, and generates observations
         based on the configured inputs.
 
         Returns:
@@ -146,47 +151,74 @@ class MyoHumanEnv(BaseEnv):
         Notes:
             - The observations are also stored in the `self.proprioception` attribute.
         """
-        mujoco.mj_kinematics(self.mj_model, self.mj_data)  # update xpos to the latest simulation values
-        
+        mujoco.mj_kinematics(
+            self.mj_model, self.mj_data
+        )  # update xpos to the latest simulation values
+
         body_pos = self.get_body_xpos()[None,]
         body_rot = self.get_body_xquat()[None,]
-        
+
         body_vel = self.get_body_linear_vel()[None,]
         body_ang_vel = self.get_body_angular_vel()[None,]
 
-        obs_dict = compute_self_observations(body_pos, body_rot, body_vel, body_ang_vel)
-        
+        obs_dict = compute_self_observations(
+            body_pos, body_rot, body_vel, body_ang_vel
+        )
+
         root_rot = sRot.from_quat(self.mj_data.qpos[[4, 5, 6, 3]])
         root_rot_euler = root_rot.as_euler("xyz")
 
         myohuman_obs = OrderedDict()
-        
+
         inputs = self.cfg.run.proprioceptive_inputs
 
         if "root_height" in inputs:
             myohuman_obs["root_height"] = obs_dict["root_h_obs"]  # 1
         if "root_tilt" in inputs:
-            myohuman_obs["root_tilt"] = np.array([np.cos(root_rot_euler[0]), np.sin(root_rot_euler[0]), np.cos(root_rot_euler[1]), np.sin(root_rot_euler[1])])  # 4
+            myohuman_obs["root_tilt"] = np.array(
+                [
+                    np.cos(root_rot_euler[0]),
+                    np.sin(root_rot_euler[0]),
+                    np.cos(root_rot_euler[1]),
+                    np.sin(root_rot_euler[1]),
+                ]
+            )  # 4
         if "local_body_pos" in inputs:
-            myohuman_obs["local_body_pos"] = obs_dict["local_body_pos"][0]  # 3 * num_bodies
+            myohuman_obs["local_body_pos"] = obs_dict["local_body_pos"][
+                0
+            ]  # 3 * num_bodies
         if "local_body_rot" in inputs:
-            myohuman_obs["local_body_rot"] = obs_dict["local_body_rot_obs"][0]  # 6 * num_bodies
+            myohuman_obs["local_body_rot"] = obs_dict["local_body_rot_obs"][
+                0
+            ]  # 6 * num_bodies
         if "local_body_vel" in inputs:
-            myohuman_obs["local_body_vel"] = obs_dict["local_body_vel"][0]  # 3 * num_bodies
+            myohuman_obs["local_body_vel"] = obs_dict["local_body_vel"][
+                0
+            ]  # 3 * num_bodies
         if "local_body_ang_vel" in inputs:
-            myohuman_obs["local_body_ang_vel"] = obs_dict["local_body_ang_vel"][0]  # 3 * num_bodies
+            myohuman_obs["local_body_ang_vel"] = obs_dict["local_body_ang_vel"][
+                0
+            ]  # 3 * num_bodies
         if "muscle_len" in inputs:
-            myohuman_obs["muscle_len"] = np.nan_to_num(self.mj_data.actuator_length.copy())  # num_actuators
+            myohuman_obs["muscle_len"] = np.nan_to_num(
+                self.mj_data.actuator_length.copy()
+            )  # num_actuators
         if "muscle_vel" in inputs:
-            myohuman_obs["muscle_vel"] = np.nan_to_num(self.mj_data.actuator_velocity.copy())  # num_actuators
+            myohuman_obs["muscle_vel"] = np.nan_to_num(
+                self.mj_data.actuator_velocity.copy()
+            )  # num_actuators
         if "muscle_force" in inputs:
-            myohuman_obs["muscle_force"] = np.nan_to_num(self.mj_data.actuator_force.copy())  # num_actuators
+            myohuman_obs["muscle_force"] = np.nan_to_num(
+                self.mj_data.actuator_force.copy()
+            )  # num_actuators
         if "feet_contacts" in inputs:
             myohuman_obs["feet_contacts"] = self.get_touch()  # 4
         self.proprioception = myohuman_obs
 
-        return np.concatenate([v.ravel() for v in myohuman_obs.values()], axis=0, dtype=self.dtype)
-    
+        return np.concatenate(
+            [v.ravel() for v in myohuman_obs.values()], axis=0, dtype=self.dtype
+        )
+
     def get_body_xpos(self, data=None):
         """
         Returns the body positions of observed bodies in X, Y, Z coordinates.
@@ -200,34 +232,52 @@ class MyoHumanEnv(BaseEnv):
         """
         src = self.mj_data if data is None else data
         return src.xquat[self.robot_body_idxes].copy()
-        
+
     def get_body_linear_vel(self, data=None):
         """
         Returns the linear velocity of the agent's body parts.
         """
         if data is None:
-            return self.mj_data.sensordata[:self.num_vel_limit].reshape(self.num_bodies, 3).copy()
+            return (
+                self.mj_data.sensordata[: self.num_vel_limit]
+                .reshape(self.num_bodies, 3)
+                .copy()
+            )
         else:
-            return data.sensordata[:self.num_vel_limit].reshape(self.num_bodies, 3).copy()
-    
+            return (
+                data.sensordata[: self.num_vel_limit]
+                .reshape(self.num_bodies, 3)
+                .copy()
+            )
+
     def get_body_angular_vel(self, data=None):
         """
         Returns the angular velocity of the agent's body parts.
         """
         if data is None:
-            return self.mj_data.sensordata[self.num_vel_limit:2 * self.num_vel_limit].reshape(self.num_bodies, 3).copy()
+            return (
+                self.mj_data.sensordata[
+                    self.num_vel_limit : 2 * self.num_vel_limit
+                ]
+                .reshape(self.num_bodies, 3)
+                .copy()
+            )
         else:
-            return data.sensordata[self.num_vel_limit:2 * self.num_vel_limit].reshape(self.num_bodies, 3).copy()
-    
+            return (
+                data.sensordata[self.num_vel_limit : 2 * self.num_vel_limit]
+                .reshape(self.num_bodies, 3)
+                .copy()
+            )
+
     def get_touch(self, data=None):
         """
         Returns the touch sensor readings of the agent.
         """
         if data is None:
-            return self.mj_data.sensordata[self.num_vel_limit * 2:].copy()
+            return self.mj_data.sensordata[self.num_vel_limit * 2 :].copy()
         else:
-            return data.sensordata[self.num_vel_limit * 2:].copy()
-        
+            return data.sensordata[self.num_vel_limit * 2 :].copy()
+
     def get_qpos(self, data=None):
         """
         Returns the joint positions of the agent.
@@ -242,10 +292,10 @@ class MyoHumanEnv(BaseEnv):
         Returns the joint velocities of the agent.
         """
         if data is None:
-            return self.mj_data.qvel.copy()[:self.qvel_lim]
+            return self.mj_data.qvel.copy()[: self.qvel_lim]
         else:
-            return data.qvel.copy()[:self.qvel_lim]
-    
+            return data.qvel.copy()[: self.qvel_lim]
+
     def get_muscle_length(self, data=None):
         if data is None:
             return self.mj_data.actuator_length.copy()
@@ -278,7 +328,7 @@ class MyoHumanEnv(BaseEnv):
         """
         return float(np.abs(action).sum() + np.linalg.norm(action))
 
-    def compute_reset(self) -> Tuple[bool, bool]:
+    def compute_reset(self) -> tuple[bool, bool]:
         """
         Determines whether the episode should reset based on termination and truncation conditions.
 
@@ -293,41 +343,47 @@ class MyoHumanEnv(BaseEnv):
         """
         Executes a physics step in the simulation with the given action.
 
-        Depending on the control mode, computes muscle activations and applies them 
+        Depending on the control mode, computes muscle activations and applies them
         to the simulation. Tracks power usage during the step.
 
-        Args:        
+        Args:
             action (np.ndarray): The action to apply. If None, a random action is sampled.
         """
         self.curr_power_usage = []
 
         if action is None:
             action = self.action_space.sample()
-        
+
         if self.control_mode == "PD":
             target_lengths = action_to_target_length(action, self.mj_model)
 
         for i in range(self.control_freq_inv):
             if not self.paused:
                 if self.control_mode == "PD":
-                    muscle_activity = target_length_to_activation(target_lengths, self.mj_data, self.mj_model)
+                    muscle_activity = target_length_to_activation(
+                        target_lengths, self.mj_data, self.mj_model
+                    )
 
                 elif self.control_mode == "direct":
                     muscle_activity = (action + 1.0) / 2.0
 
                 else:
                     raise NotImplementedError
-                  
+
                 self.mj_data.ctrl[:] = muscle_activity
                 mujoco.mj_step(self.mj_model, self.mj_data)
-                self.curr_power_usage.append(self.compute_energy_reward(muscle_activity))
-    
-    def post_physics_step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, dict]:
+                self.curr_power_usage.append(
+                    self.compute_energy_reward(muscle_activity)
+                )
+
+    def post_physics_step(
+        self, action: np.ndarray
+    ) -> tuple[np.ndarray, float, bool, bool, dict]:
         """
         Processes the environment state after each physics step.
 
-        Increments the simulation time, computes observations, reward, and checks 
-        for termination or truncation conditions. Collects and returns additional 
+        Increments the simulation time, computes observations, reward, and checks
+        for termination or truncation conditions. Collects and returns additional
         information about the reward components.
 
         Args:
@@ -352,7 +408,7 @@ class MyoHumanEnv(BaseEnv):
         info.update(self.reward_info)
 
         return obs, reward, terminated, truncated, info
-    
+
     def init_myohuman(self):
         """
         Initializes the MyoHuman environment. In the environment class, this defaults to
@@ -363,8 +419,8 @@ class MyoHumanEnv(BaseEnv):
         self.mj_data.act[:] = 0
         self.mj_data.ctrl[:] = 0
         self.mj_data.qpos[2] = 0.94
-        self.mj_data.qpos[3:7] = np.array([1, 0, 0, 0])   
-        
+        self.mj_data.qpos[3:7] = np.array([1, 0, 0, 0])
+
     def forward_sim(self):
         mujoco.mj_forward(self.mj_model, self.mj_data)
 
@@ -378,7 +434,7 @@ def compute_self_observations(
     body_pos: np.ndarray,
     body_rot: np.ndarray,
     body_vel: np.ndarray,
-    body_ang_vel: np.ndarray
+    body_ang_vel: np.ndarray,
 ) -> OrderedDict:
     """
     Computes observations of the agent's local body state relative to its root.
@@ -398,58 +454,75 @@ def compute_self_observations(
             - `local_body_ang_vel`: Local body angular velocities.
     """
     obs = OrderedDict()
-    
+
     root_pos = body_pos[:, 0, :]
     root_rot = body_rot[:, 0, :]
-    
+
     heading_rot_inv = npt_utils.calc_heading_quat_inv(root_rot)
     root_h = root_pos[:, 2:3]
 
     obs["root_h_obs"] = root_h
-    
+
     heading_rot_inv_expand = heading_rot_inv[..., None, :]
-    heading_rot_inv_expand = heading_rot_inv_expand.repeat(body_pos.shape[1], axis=1)
-    flat_heading_rot_inv = heading_rot_inv_expand.reshape(heading_rot_inv_expand.shape[0] * heading_rot_inv_expand.shape[1], heading_rot_inv_expand.shape[2],)
+    heading_rot_inv_expand = heading_rot_inv_expand.repeat(
+        body_pos.shape[1], axis=1
+    )
+    flat_heading_rot_inv = heading_rot_inv_expand.reshape(
+        heading_rot_inv_expand.shape[0] * heading_rot_inv_expand.shape[1],
+        heading_rot_inv_expand.shape[2],
+    )
 
     root_pos_expand = root_pos[..., None, :]
     local_body_pos = body_pos - root_pos_expand
     flat_local_body_pos = local_body_pos.reshape(
-        local_body_pos.shape[0] * local_body_pos.shape[1], local_body_pos.shape[2]
+        local_body_pos.shape[0] * local_body_pos.shape[1],
+        local_body_pos.shape[2],
     )
     flat_local_body_pos = npt_utils.quat_rotate(
         flat_heading_rot_inv, flat_local_body_pos
     )
     local_body_pos = flat_local_body_pos.reshape(
-        local_body_pos.shape[0], local_body_pos.shape[1] * local_body_pos.shape[2]
+        local_body_pos.shape[0],
+        local_body_pos.shape[1] * local_body_pos.shape[2],
     )
     obs["local_body_pos"] = local_body_pos[..., 3:]  # remove root pos
 
     flat_body_rot = body_rot.reshape(
         body_rot.shape[0] * body_rot.shape[1], body_rot.shape[2]
     )  # This is global rotation of the body
-    flat_local_body_rot = npt_utils.quat_mul(flat_heading_rot_inv, flat_body_rot)
+    flat_local_body_rot = npt_utils.quat_mul(
+        flat_heading_rot_inv, flat_body_rot
+    )
     flat_local_body_rot_obs = npt_utils.quat_to_tan_norm(flat_local_body_rot)
     obs["local_body_rot_obs"] = flat_local_body_rot_obs.reshape(
         body_rot.shape[0], body_rot.shape[1] * flat_local_body_rot_obs.shape[1]
     )
 
     # Velocity
-    flat_body_vel = body_vel.reshape(body_vel.shape[0] * body_vel.shape[1], body_vel.shape[2])
-    flat_local_body_vel = npt_utils.quat_rotate(flat_heading_rot_inv, flat_body_vel)
-    obs["local_body_vel"] = flat_local_body_vel.reshape(body_vel.shape[0], body_vel.shape[1] * body_vel.shape[2])
+    flat_body_vel = body_vel.reshape(
+        body_vel.shape[0] * body_vel.shape[1], body_vel.shape[2]
+    )
+    flat_local_body_vel = npt_utils.quat_rotate(
+        flat_heading_rot_inv, flat_body_vel
+    )
+    obs["local_body_vel"] = flat_local_body_vel.reshape(
+        body_vel.shape[0], body_vel.shape[1] * body_vel.shape[2]
+    )
 
-    flat_body_ang_vel = body_ang_vel.reshape(body_ang_vel.shape[0] * body_ang_vel.shape[1], body_ang_vel.shape[2])
-    flat_local_body_ang_vel = npt_utils.quat_rotate(flat_heading_rot_inv, flat_body_ang_vel)
-    obs["local_body_ang_vel"] = flat_local_body_ang_vel.reshape(body_ang_vel.shape[0], body_ang_vel.shape[1] * body_ang_vel.shape[2])
-    
+    flat_body_ang_vel = body_ang_vel.reshape(
+        body_ang_vel.shape[0] * body_ang_vel.shape[1], body_ang_vel.shape[2]
+    )
+    flat_local_body_ang_vel = npt_utils.quat_rotate(
+        flat_heading_rot_inv, flat_body_ang_vel
+    )
+    obs["local_body_ang_vel"] = flat_local_body_ang_vel.reshape(
+        body_ang_vel.shape[0], body_ang_vel.shape[1] * body_ang_vel.shape[2]
+    )
+
     return obs
 
 
-def force_to_activation(
-    forces,
-    model,
-    data
-):
+def force_to_activation(forces, model, data):
     """
     Converts actuator forces to activation levels for each actuator in the Mujoco model.
 
@@ -470,17 +543,15 @@ def force_to_activation(
         prmb = model.actuator_biasprm[idx_actuator, :9]
         prmg = model.actuator_gainprm[idx_actuator, :9]
         bias = mujoco.mju_muscleBias(length, lengthrange, acc0, prmb)
-        gain = min(-1, mujoco.mju_muscleGain(length, velocity, lengthrange, acc0, prmg))
+        gain = min(
+            -1, mujoco.mju_muscleGain(length, velocity, lengthrange, acc0, prmg)
+        )
         activations.append(np.clip((forces[idx_actuator] - bias) / gain, 0, 1))
 
     return activations
 
 
-def target_length_to_force(
-    lengths: np.ndarray,
-    data,
-    model
-) -> list:
+def target_length_to_force(lengths: np.ndarray, data, model) -> list:
     """
     Converts target muscle lengths to forces using a PD control law.
 
@@ -499,18 +570,14 @@ def target_length_to_force(
         peak_force = model.actuator_biasprm[idx_actuator, 2]
         kp = 5 * peak_force
         kd = 0.1 * kp
-        force = (kp * (lengths[idx_actuator] - length) - kd * velocity)
+        force = kp * (lengths[idx_actuator] - length) - kd * velocity
         clipped_force = np.clip(force, -peak_force, 0)
         forces.append(clipped_force)
 
     return forces
 
 
-def target_length_to_activation(
-    lengths: np.ndarray,
-    data,
-    model
-) -> np.ndarray:
+def target_length_to_activation(lengths: np.ndarray, data, model) -> np.ndarray:
     """
     Converts target lengths to activation levels via force computation.
 
@@ -527,10 +594,7 @@ def target_length_to_activation(
     return np.clip(activations, 0, 1)
 
 
-def action_to_target_length(
-    action: np.ndarray,
-    model
-) -> list:
+def action_to_target_length(action: np.ndarray, model) -> list:
     """
     Maps actions to target lengths for actuators based on their length ranges.
 

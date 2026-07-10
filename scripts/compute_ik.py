@@ -50,21 +50,25 @@ DEFAULT_SMPL_DIR = str(BASE_DIR / "data" / "smpl")
 DEFAULT_XML_PATH = str(BASE_DIR / "xml" / "myohuman.xml")
 DEFAULT_TRAIN_KEYS = str(BASE_DIR / "data" / "dataset" / "kit_train_keys.txt")
 DEFAULT_TEST_KEYS = str(BASE_DIR / "data" / "dataset" / "kit_test_keys.txt")
-DEFAULT_TRAIN_OUTPUT = str(BASE_DIR / "data" / "inverse_kinematics" / "ik_train.pkl")
-DEFAULT_TEST_OUTPUT = str(BASE_DIR / "data" / "inverse_kinematics" / "ik_test.pkl")
+DEFAULT_TRAIN_OUTPUT = str(
+    BASE_DIR / "data" / "inverse_kinematics" / "ik_train.pkl"
+)
+DEFAULT_TEST_OUTPUT = str(
+    BASE_DIR / "data" / "inverse_kinematics" / "ik_test.pkl"
+)
 
-CHECKPOINT_EVERY = 50   # save intermediate progress every N completed motions
+CHECKPOINT_EVERY = 50  # save intermediate progress every N completed motions
 TARGET_FPS = 30
 INITIAL_ROT = sRot.from_euler("XYZ", [-np.pi / 2, 0, -np.pi / 2])
 
 SMPL_TRACKED_IDS = [
-    0,   # Pelvis
-    2,   # L_Knee
-    6,   # R_Knee
-    3,   # L_Ankle
-    7,   # R_Ankle
-    4,   # L_Toe
-    8,   # R_Toe
+    0,  # Pelvis
+    2,  # L_Knee
+    6,  # R_Knee
+    3,  # L_Ankle
+    7,  # R_Ankle
+    4,  # L_Toe
+    8,  # R_Toe
     13,  # Head
     20,  # R_Shoulder
     21,  # R_Elbow
@@ -75,20 +79,20 @@ SMPL_TRACKED_IDS = [
 ]
 
 MYOHUMAN_TRACKED_BODIES = [
-    "root",      # Таз
-    "tibia_l",   # Левая голень
-    "tibia_r",   # Правая голень
-    "talus_l",   # Левая лодыжка
-    "talus_r",   # Правая лодыжка
-    "toes_l",    # Левые пальцы стопы
-    "toes_r",    # Правые пальцы стопы
-    "head",       # Голова
-    "humerus_r",    # Правая плечевая кость
-    "radius_r",     # Правое предплечье
-    "lunate_r",     # Правое запятье
-    'humerus_l',  # Левая плечевая кость
-    'radius_l',   # Левое предплечье
-    'lunate_l',   # Левое запястье
+    "root",  # Таз
+    "tibia_l",  # Левая голень
+    "tibia_r",  # Правая голень
+    "talus_l",  # Левая лодыжка
+    "talus_r",  # Правая лодыжка
+    "toes_l",  # Левые пальцы стопы
+    "toes_r",  # Правые пальцы стопы
+    "head",  # Голова
+    "humerus_r",  # Правая плечевая кость
+    "radius_r",  # Правое предплечье
+    "lunate_r",  # Правое запятье
+    "humerus_l",  # Левая плечевая кость
+    "radius_l",  # Левое предплечье
+    "lunate_l",  # Левое запястье
 ]
 
 
@@ -96,19 +100,35 @@ MYOHUMAN_TRACKED_BODIES = [
 # CLI
 # ──────────────────────────────────────────────────────────────────────────────
 def parse_args():
-    p = argparse.ArgumentParser(description="Compute IK reference data for all frames")
-    p.add_argument("--split", choices=["train", "test", "both"], default="train",
-                   help="train | test | both (both: один пул воркеров, два выходных .pkl)")
-    p.add_argument("--output", type=str, default=None,
-                   help="Output .pkl (train default path; при --split both задаёт только train-файл, test — по умолчанию)")
+    p = argparse.ArgumentParser(
+        description="Compute IK reference data for all frames"
+    )
+    p.add_argument(
+        "--split",
+        choices=["train", "test", "both"],
+        default="train",
+        help="train | test | both (both: один пул воркеров, два выходных .pkl)",
+    )
+    p.add_argument(
+        "--output",
+        type=str,
+        default=None,
+        help="Output .pkl (train default path; при --split both задаёт только train-файл, test — по умолчанию)",
+    )
     p.add_argument("--kit-dir", type=str, default=DEFAULT_KIT_DIR)
     p.add_argument("--smpl-dir", type=str, default=DEFAULT_SMPL_DIR)
     p.add_argument("--xml-path", type=str, default=DEFAULT_XML_PATH)
     p.add_argument("--train-keys", type=str, default=DEFAULT_TRAIN_KEYS)
     p.add_argument("--test-keys", type=str, default=DEFAULT_TEST_KEYS)
-    p.add_argument("--workers", type=int, default=None,
-                   help="Number of parallel workers (default: 1 on macOS, cpu_count elsewhere)")
-    p.add_argument("--checkpoint-dir", type=str, default=str(BASE_DIR / "data" / "tmp"))
+    p.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Number of parallel workers (default: 1 on macOS, cpu_count elsewhere)",
+    )
+    p.add_argument(
+        "--checkpoint-dir", type=str, default=str(BASE_DIR / "data" / "tmp")
+    )
     p.add_argument(
         "--finalize-only",
         action="store_true",
@@ -176,7 +196,9 @@ def load_npz_motion(data_path: str):
 # ──────────────────────────────────────────────────────────────────────────────
 # Core pipeline: FK + IK for a single motion
 # ──────────────────────────────────────────────────────────────────────────────
-def process_motion(motion_id: int, data_path: str, xml_path: str, smpl_dir: str):
+def process_motion(
+    motion_id: int, data_path: str, xml_path: str, smpl_dir: str
+):
     """
     Full pipeline for one motion:
         load .npz  →  SMPL FK  →  fix height  →  IK every frame  →  return result
@@ -221,7 +243,7 @@ def process_motion(motion_id: int, data_path: str, xml_path: str, smpl_dir: str)
 
         body_names = [mj_model.body(i).name for i in range(mj_model.nbody)][1:]
         track_ids = [body_names.index(b) for b in MYOHUMAN_TRACKED_BODIES]
-        idx_start = 1        # skip "world" body in xpos
+        idx_start = 1  # skip "world" body in xpos
         idx_end = mj_model.nbody
 
         joint_bounds = [tuple(b) for b in mj_model.jnt_range[1:]]
@@ -240,17 +262,17 @@ def process_motion(motion_id: int, data_path: str, xml_path: str, smpl_dir: str)
             mj_data.qpos[2] = 0.94
             mj_data.qpos[3:7] = [1, 0, 0, 0]
 
-            mj_data.qpos[:3] = fq[:3]                                # translation
-            rq_wxyz = fq[3:7]                                        # pytorch3d w,x,y,z
-            rq_xyzw = rq_wxyz[[1, 2, 3, 0]]                         # → scipy x,y,z,w
+            mj_data.qpos[:3] = fq[:3]  # translation
+            rq_wxyz = fq[3:7]  # pytorch3d w,x,y,z
+            rq_xyzw = rq_wxyz[[1, 2, 3, 0]]  # → scipy x,y,z,w
             rq_rot = (sRot.from_quat(rq_xyzw) * INITIAL_ROT).as_quat()
-            mj_data.qpos[3:7] = np.roll(rq_rot, 1)                  # → mujoco w,x,y,z
+            mj_data.qpos[3:7] = np.roll(rq_rot, 1)  # → mujoco w,x,y,z
 
             mujoco.mj_kinematics(mj_model, mj_data)
             init_qpos = mj_data.qpos.copy()
 
             # IK target: SMPL FK body positions at tracked joints (skip root/pelvis)
-            ref_pos = global_pos[fi][SMPL_TRACKED_IDS[1:]]           # (13, 3)
+            ref_pos = global_pos[fi][SMPL_TRACKED_IDS[1:]]  # (13, 3)
 
             # --- optimisation closures (capture mj_data, mj_model, etc.) ---
             def objective(q):
@@ -260,7 +282,9 @@ def process_motion(motion_id: int, data_path: str, xml_path: str, smpl_dir: str)
                 mj_data.qpos[7:] = q
                 mujoco.mj_kinematics(mj_model, mj_data)
                 bp = mj_data.xpos[idx_start:idx_end]
-                return np.linalg.norm(bp[track_ids[1:]] - ref_pos, axis=-1).sum()
+                return np.linalg.norm(
+                    bp[track_ids[1:]] - ref_pos, axis=-1
+                ).sum()
 
             x0 = prev_qpos[7:] if prev_qpos is not None else init_qpos[7:]
 
@@ -321,7 +345,9 @@ def main():
         output_test = DEFAULT_TEST_OUTPUT
         logger.info(
             "Split 'both': %d train keys, %d test keys → %d unique keys",
-            len(train_keys), len(test_keys), len(combined),
+            len(train_keys),
+            len(test_keys),
+            len(combined),
         )
     elif args.split == "train":
         train_keys = load_keys(args.train_keys)
@@ -339,7 +365,9 @@ def main():
         logger.info(f"Loaded {len(combined)} keys for split 'test'")
 
     key_to_path = discover_motions(args.kit_dir, keys_for_discover)
-    logger.info(f"Found {len(key_to_path)}/{len(keys_for_discover)} matching .npz files")
+    logger.info(
+        f"Found {len(key_to_path)}/{len(keys_for_discover)} matching .npz files"
+    )
 
     ordered_keys = [k for k in combined if k in key_to_path]
     motion_id_map = {mid: key for mid, key in enumerate(ordered_keys)}
@@ -352,7 +380,9 @@ def main():
     ckpt_path.parent.mkdir(parents=True, exist_ok=True)
     if args.finalize_only:
         if not ckpt_path.exists():
-            raise SystemExit(f"--finalize-only: нет файла чекпоинта {ckpt_path}")
+            raise SystemExit(
+                f"--finalize-only: нет файла чекпоинта {ckpt_path}"
+            )
         checkpoint = joblib.load(ckpt_path)
         logger.info(
             "Finalize-only: загружен чекпоинт (%d записей), IK пропускается",
@@ -361,13 +391,21 @@ def main():
         remaining = []
     elif ckpt_path.exists():
         checkpoint = joblib.load(ckpt_path)
-        logger.info(f"Resumed checkpoint: {len(checkpoint)} motions already done")
-        remaining = [(mid, key) for mid, key in motion_id_map.items()
-                     if key not in checkpoint]
+        logger.info(
+            f"Resumed checkpoint: {len(checkpoint)} motions already done"
+        )
+        remaining = [
+            (mid, key)
+            for mid, key in motion_id_map.items()
+            if key not in checkpoint
+        ]
     else:
         checkpoint = {}
-        remaining = [(mid, key) for mid, key in motion_id_map.items()
-                     if key not in checkpoint]
+        remaining = [
+            (mid, key)
+            for mid, key in motion_id_map.items()
+            if key not in checkpoint
+        ]
 
     if not args.finalize_only:
         logger.info(f"{len(remaining)} motions remaining to process")
@@ -376,7 +414,9 @@ def main():
     if remaining:
         num_workers = args.workers
         if num_workers is None:
-            num_workers = 1 if sys.platform == "darwin" else min(os.cpu_count() or 1, 64)
+            num_workers = (
+                1 if sys.platform == "darwin" else min(os.cpu_count() or 1, 64)
+            )
         logger.info(f"Using {num_workers} worker(s)")
 
         since_save = 0
@@ -384,13 +424,18 @@ def main():
         with ProcessPoolExecutor(max_workers=num_workers) as pool:
             futures = {
                 pool.submit(
-                    process_motion, mid,
-                    key_to_path[key], args.xml_path, args.smpl_dir,
+                    process_motion,
+                    mid,
+                    key_to_path[key],
+                    args.xml_path,
+                    args.smpl_dir,
                 ): mid
                 for mid, key in remaining
             }
 
-            for future in tqdm(as_completed(futures), total=len(futures), desc="IK"):
+            for future in tqdm(
+                as_completed(futures), total=len(futures), desc="IK"
+            ):
                 mid = futures[future]
                 key = motion_id_map[mid]
                 result = future.result()
@@ -398,7 +443,9 @@ def main():
                     checkpoint[key] = result
                     since_save += 1
                 else:
-                    logger.warning(f"Motion {mid} ({key}) returned None (skipped)")
+                    logger.warning(
+                        f"Motion {mid} ({key}) returned None (skipped)"
+                    )
 
                 if since_save >= CHECKPOINT_EVERY:
                     joblib.dump(checkpoint, ckpt_path)
@@ -417,8 +464,10 @@ def main():
         joblib.dump(out_te, output_test)
         logger.info(
             "Saved %d train → %s; %d test → %s",
-            len(out_tr["frames"]), output_train,
-            len(out_te["frames"]), output_test,
+            len(out_tr["frames"]),
+            output_train,
+            len(out_te["frames"]),
+            output_test,
         )
     else:
         output_path = output_train
