@@ -84,11 +84,20 @@ select = ["E", "F", "UP", "B", "SIM", "C4", "PT"]
 
 [tool.typos.files]
 extend-exclude = [
+    "notebooks",
     "src/myohuman/poselib",
     "src/myohuman/smpl/smpl_parser.py",
     "src/myohuman/utils/transformation.py",
     "src/myohuman/utils/pytorch3d_transforms.py",
 ]
+
+# Domain terms / identifiers that are not typos (renaming would change an API
+# or a vendored function name): guassian_filter, fix_continous_dof, GAE, thr.
+[tool.typos.default.extend-words]
+guassian = "guassian"
+continous = "continous"
+thr = "thr"
+gae = "gae"
 
 # Scoped to the typed tooling for now; annotating the legacy src/ is a
 # separate follow-up (hundreds of implicit-Optional / attr-defined findings).

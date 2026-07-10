@@ -99,7 +99,12 @@ def pose_file(tmp_path_factory, nq):
     data = {
         "frames": {0: frames},
         "metadata": {
-            0: {"length": length, "dt": DT, "fps": 30, "num_frames": num_frames}
+            0: {
+                "length": length,
+                "dt": DT,
+                "fps": 30,
+                "num_frames": num_frames,
+            },
         },
     }
     path = tmp_path_factory.mktemp("ik") / "ik_tiny.pkl"
@@ -244,7 +249,8 @@ def test_compute_energy_reward_available_on_base_env():
     # MyoHumanIm inherits the same implementation (no override)
     assert MyoHumanIm.compute_energy_reward is MyoHumanEnv.compute_energy_reward
     assert MyoHumanEnv.compute_energy_reward(
-        None, np.array([3.0, 4.0])
+        None,
+        np.array([3.0, 4.0]),
     ) == pytest.approx(12.0)
 
 

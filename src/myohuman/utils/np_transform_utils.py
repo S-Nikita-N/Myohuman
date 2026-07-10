@@ -40,7 +40,7 @@ def quat_rotate(q, v):
     c = (
         q_vec
         * (q_vec.reshape(shape[0], 1, 3) @ v.reshape(shape[0], 3, 1)).squeeze(
-            -1
+            -1,
         )
         * 2.0
     )
@@ -159,7 +159,7 @@ def remove_base_rot(quat, humanoid_type="smpl"):
     else:
         raise ValueError(
             f"remove_base_rot: unsupported humanoid_type '{humanoid_type}'. "
-            f"Supported: 'smpl', 'smplh', 'smplx'."
+            f"Supported: 'smpl', 'smplh', 'smplx'.",
         )
 
     shape = quat.shape[0]

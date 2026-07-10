@@ -131,7 +131,8 @@ class MyoHumanIm(MyoHumanTask):
         """
         if not os.path.exists(self.initial_pose_file):
             logger.warning(
-                "!!! Reference data file not found: %s", self.initial_pose_file
+                "!!! Reference data file not found: %s",
+                self.initial_pose_file,
             )
             self.initial_pos_data = {}
             self._motion_metadata = {}
@@ -157,7 +158,7 @@ class MyoHumanIm(MyoHumanTask):
         if self.motion_ids_file:
             if not os.path.exists(self.motion_ids_file):
                 raise FileNotFoundError(
-                    f"motion_ids_file not found: {self.motion_ids_file}"
+                    f"motion_ids_file not found: {self.motion_ids_file}",
                 )
             with open(self.motion_ids_file) as f:
                 file_ids = {
@@ -288,7 +289,7 @@ class MyoHumanIm(MyoHumanTask):
 
         def draw_obj(scene):
             ref_dict = self.get_state_from_motionlib_cache(
-                (self.cur_t) * self.dt + self._motion_start_time
+                (self.cur_t) * self.dt + self._motion_start_time,
             )
             ref_pos_subset = ref_dict.xpos[..., self.tracked_bodies_id, :]
 
@@ -454,7 +455,8 @@ class MyoHumanIm(MyoHumanTask):
 
         # Look up stored IK solution for this frame
         ref_qpos = self._lookup_reference_qpos(
-            motion_id, self._motion_start_time
+            motion_id,
+            self._motion_start_time,
         )
         headed_qpos = self._apply_heading(ref_qpos.copy())
 
@@ -463,7 +465,8 @@ class MyoHumanIm(MyoHumanTask):
         # Velocity from finite differences of two neighbouring frames
         if self._motion_start_time > 0:
             prev_qpos = self._lookup_reference_qpos(
-                motion_id, self._motion_start_time - self.dt
+                motion_id,
+                self._motion_start_time - self.dt,
             )
             prev_headed = self._apply_heading(prev_qpos.copy())
             mujoco.mj_differentiatePos(
@@ -515,46 +518,56 @@ class MyoHumanIm(MyoHumanTask):
         self.body_rot.append(
             np.full(
                 self.get_body_xquat()[None,][
-                    ..., self.tracked_bodies_id, :
+                    ...,
+                    self.tracked_bodies_id,
+                    :,
                 ].shape,
                 np.nan,
-            )
+            ),
         )
         self.body_vel.append(
             np.full(
                 self.get_body_linear_vel()[None,][
-                    ..., self.tracked_bodies_id, :
+                    ...,
+                    self.tracked_bodies_id,
+                    :,
                 ].shape,
                 np.nan,
-            )
+            ),
         )
         self.ref_pos.append(
             np.full(
                 self.get_body_xpos()[None,][
-                    ..., self.tracked_bodies_id, :
+                    ...,
+                    self.tracked_bodies_id,
+                    :,
                 ].shape,
                 np.nan,
-            )
+            ),
         )
         self.ref_rot.append(
             np.full(
                 self.get_body_xquat()[None,][
-                    ..., self.tracked_bodies_id, :
+                    ...,
+                    self.tracked_bodies_id,
+                    :,
                 ].shape,
                 np.nan,
-            )
+            ),
         )
         self.ref_vel.append(
             np.full(
                 self.get_body_linear_vel()[None,][
-                    ..., self.tracked_bodies_id, :
+                    ...,
+                    self.tracked_bodies_id,
+                    :,
                 ].shape,
                 np.nan,
-            )
+            ),
         )
         self.motion_id.append(np.nan)
         self.muscle_forces.append(
-            np.full(self.get_muscle_force().shape, np.nan)
+            np.full(self.get_muscle_force().shape, np.nan),
         )
         self.muscle_controls.append(np.full(self.mj_data.ctrl.shape, np.nan))
         self.policy_outputs.append(np.full(self.mj_data.ctrl.shape, np.nan))
@@ -629,7 +642,8 @@ class MyoHumanIm(MyoHumanTask):
 
         if terminated:
             per_body_dist = np.linalg.norm(
-                body_pos_subset[0] - ref_pos_subset[0], axis=-1
+                body_pos_subset[0] - ref_pos_subset[0],
+                axis=-1,
             )
             worst_idx = int(per_body_dist.argmax())
             self.last_termination_body = self.reset_bodies[worst_idx]
@@ -671,7 +685,7 @@ class MyoHumanIm(MyoHumanTask):
         self.max_mpjpe_value = mpjpe_arr.max() if len(mpjpe_arr) > 0 else 0.0
         if terminated:
             self.frame_coverage = sim_time / self.get_motion_length(
-                self._sampled_motion_id
+                self._sampled_motion_id,
             )
         else:
             self.frame_coverage = 1.0
@@ -687,12 +701,14 @@ class MyoHumanIm(MyoHumanTask):
         if self.test and self.im_eval:
             # Evaluation mode: use the motion set by forward_motions()
             self._sampled_motion_id = getattr(
-                self, "_current_eval_motion_id", int(self._active_motion_ids[0])
+                self,
+                "_current_eval_motion_id",
+                int(self._active_motion_ids[0]),
             )
         else:
             # Training or test-run: sample from the active pool
             self._sampled_motion_id = int(
-                np.random.choice(self._active_motion_ids)
+                np.random.choice(self._active_motion_ids),
             )
 
         # ── Start time ───────────────────────────────────────────────────
@@ -703,7 +719,7 @@ class MyoHumanIm(MyoHumanTask):
             motion_id = self._sampled_motion_id
             if motion_id in self.initial_pos_data:
                 self._motion_start_time = self._sample_valid_start_time(
-                    motion_id
+                    motion_id,
                 )
 
         # ── Heading randomization (per-episode) ─────────────────────────
@@ -736,7 +752,9 @@ class MyoHumanIm(MyoHumanTask):
         return self._sampled_motion_id
 
     def _lookup_reference_qpos(
-        self, motion_id: int, motion_time: float
+        self,
+        motion_id: int,
+        motion_time: float,
     ) -> np.ndarray | None:
         """
         Returns the IK-computed qpos for the closest cached frame of the given
@@ -774,7 +792,8 @@ class MyoHumanIm(MyoHumanTask):
         return self.ref_motion_cache
 
     def _build_reference_state(
-        self, motion_time: np.ndarray
+        self,
+        motion_time: np.ndarray,
     ) -> dict[str, np.ndarray]:
         """
         Populates the reference Mujoco data buffer using pre-computed IK poses
@@ -790,7 +809,8 @@ class MyoHumanIm(MyoHumanTask):
 
         if motion_time > 0:
             prev_ref_qpos = self._lookup_reference_qpos(
-                motion_id, motion_time - self.dt
+                motion_id,
+                motion_time - self.dt,
             )
             prev_headed = self._apply_heading(prev_ref_qpos.copy())
             mujoco.mj_differentiatePos(
@@ -846,7 +866,7 @@ class MyoHumanIm(MyoHumanTask):
         """
 
         ref_dict = self.get_state_from_motionlib_cache(
-            (self.cur_t + 1) * self.dt + self._motion_start_time
+            (self.cur_t + 1) * self.dt + self._motion_start_time,
         )
 
         body_pos = self.get_body_xpos()[None,]
@@ -864,7 +884,9 @@ class MyoHumanIm(MyoHumanTask):
         ref_pos_subset = ref_dict.xpos[None,][..., self.tracked_bodies_id, :]
         ref_rot_subset = ref_dict.xquat[None,][..., self.tracked_bodies_id, :]
         ref_body_vel_subset = ref_dict.body_vel[None,][
-            ..., self.tracked_bodies_id, :
+            ...,
+            self.tracked_bodies_id,
+            :,
         ]
         ref_muscle_len = ref_dict.actuator_length
         ref_muscle_vel = ref_dict.actuator_velocity
@@ -908,7 +930,9 @@ class MyoHumanIm(MyoHumanTask):
             task_obs["diff_muscle_vel"] = full_task_obs["diff_muscle_vel"]
 
         return np.concatenate(
-            [v.ravel() for v in task_obs.values()], axis=0, dtype=self.dtype
+            [v.ravel() for v in task_obs.values()],
+            axis=0,
+            dtype=self.dtype,
         )
 
     def record_biomechanics(
@@ -994,7 +1018,8 @@ class MyoHumanIm(MyoHumanTask):
         self.mpjpe.append(np.linalg.norm(body_pos - ref_pos, axis=-1).mean())
 
     def compute_muscle_imitation_reward(
-        self, ref_state: dict
+        self,
+        ref_state: dict,
     ) -> tuple[float, dict[str, float]]:
         """
         Matches simulated muscle length/velocity to the IK reference.
@@ -1011,7 +1036,7 @@ class MyoHumanIm(MyoHumanTask):
 
         r_len = np.exp(-k_len * ((curr_lengths - ref_lengths) ** 2).mean())
         r_vel = np.exp(
-            -k_vel * ((curr_velocities - ref_velocities) ** 2).mean()
+            -k_vel * ((curr_velocities - ref_velocities) ** 2).mean(),
         )
 
         reward = w_len * r_len + w_vel * r_vel
@@ -1038,10 +1063,10 @@ class MyoHumanIm(MyoHumanTask):
             - `self.reward_info`: Stores raw reward components for analysis.
         """
         ref_dict = self.get_state_from_motionlib_cache(
-            (self.cur_t) * self.dt + self._motion_start_time
+            (self.cur_t) * self.dt + self._motion_start_time,
         )
         muscle_reward, muscle_reward_raw = self.compute_muscle_imitation_reward(
-            ref_dict
+            ref_dict,
         )
 
         body_pos = self.get_body_xpos()[None,]
@@ -1152,7 +1177,7 @@ class MyoHumanIm(MyoHumanTask):
         remain on self until this point.
         """
         obs, reward, terminated, truncated, info = super().post_physics_step(
-            action
+            action,
         )
         if terminated or truncated:
             info["mpjpe"] = float(self.mpjpe_value)
@@ -1255,7 +1280,10 @@ def compute_imitation_observations(
     )
 
     diff_global_body_pos = ref_body_pos.reshape(
-        B, time_steps, J, 3
+        B,
+        time_steps,
+        J,
+        3,
     ) - body_pos.reshape(B, 1, J, 3)
 
     diff_local_body_pos_flat = npt_utils.quat_rotate(
@@ -1267,17 +1295,25 @@ def compute_imitation_observations(
 
     # Velocities
     diff_global_vel = ref_body_vel.reshape(
-        B, time_steps, J, 3
+        B,
+        time_steps,
+        J,
+        3,
     ) - body_vel.reshape(B, 1, J, 3)
     obs["diff_local_vel"] = npt_utils.quat_rotate(
-        heading_inv_rot_expand.reshape(-1, 4), diff_global_vel.reshape(-1, 3)
+        heading_inv_rot_expand.reshape(-1, 4),
+        diff_global_vel.reshape(-1, 3),
     )
 
     local_ref_body_pos = ref_body_pos.reshape(
-        B, time_steps, J, 3
+        B,
+        time_steps,
+        J,
+        3,
     ) - root_pos.reshape(B, 1, 1, 3)  # preserves the body position
     obs["local_ref_body_pos"] = npt_utils.quat_rotate(
-        heading_inv_rot_expand.reshape(-1, 4), local_ref_body_pos.reshape(-1, 3)
+        heading_inv_rot_expand.reshape(-1, 4),
+        local_ref_body_pos.reshape(-1, 3),
     )
 
     obs["diff_muscle_len"] = ref_muscle_len - muscle_len
@@ -1325,7 +1361,7 @@ def compute_imitation_reward(
     # over bodies
     diff_global_body_pos = ref_body_pos - body_pos
     per_body_pos_err = (diff_global_body_pos**2).mean(
-        axis=-1
+        axis=-1,
     )  # (..., num_bodies)
     if body_weights is not None:
         diff_body_pos_dist = (per_body_pos_err * body_weights).sum(axis=-1)
@@ -1352,7 +1388,10 @@ def compute_imitation_reward(
 
 
 def compute_humanoid_im_reset(
-    rigid_body_pos, ref_body_pos, termination_distance, use_mean
+    rigid_body_pos,
+    ref_body_pos,
+    termination_distance,
+    use_mean,
 ) -> np.ndarray:
     """
     Determines whether the humanoid should reset based on deviations from

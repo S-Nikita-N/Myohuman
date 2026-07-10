@@ -52,10 +52,10 @@ DEFAULT_XML_PATH = str(BASE_DIR / "xml" / "myohuman.xml")
 DEFAULT_TRAIN_KEYS = str(BASE_DIR / "data" / "dataset" / "kit_train_keys.txt")
 DEFAULT_TEST_KEYS = str(BASE_DIR / "data" / "dataset" / "kit_test_keys.txt")
 DEFAULT_TRAIN_OUTPUT = str(
-    BASE_DIR / "data" / "inverse_kinematics" / "ik_train.pkl"
+    BASE_DIR / "data" / "inverse_kinematics" / "ik_train.pkl",
 )
 DEFAULT_TEST_OUTPUT = str(
-    BASE_DIR / "data" / "inverse_kinematics" / "ik_test.pkl"
+    BASE_DIR / "data" / "inverse_kinematics" / "ik_test.pkl",
 )
 
 CHECKPOINT_EVERY = 50  # save intermediate progress every N completed motions
@@ -102,7 +102,7 @@ MYOHUMAN_TRACKED_BODIES = [
 ################################################
 def parse_args():
     p = argparse.ArgumentParser(
-        description="Compute IK reference data for all frames"
+        description="Compute IK reference data for all frames",
     )
     p.add_argument(
         "--split",
@@ -134,7 +134,9 @@ def parse_args():
         ),
     )
     p.add_argument(
-        "--checkpoint-dir", type=str, default=str(BASE_DIR / "data" / "tmp")
+        "--checkpoint-dir",
+        type=str,
+        default=str(BASE_DIR / "data" / "tmp"),
     )
     p.add_argument(
         "--finalize-only",
@@ -208,7 +210,10 @@ def load_npz_motion(data_path: str):
 #  Core pipeline: FK + IK for a single motion  #
 ################################################
 def process_motion(
-    motion_id: int, data_path: str, xml_path: str, smpl_dir: str
+    motion_id: int,
+    data_path: str,
+    xml_path: str,
+    smpl_dir: str,
 ):
     """
     Full pipeline for one motion:
@@ -234,7 +239,8 @@ def process_motion(
         with torch.no_grad():
             n_check = min(30, N)
             verts, _ = fk_model.smpl_parser.get_joints_verts(
-                pose_aa_t[:n_check], th_trans=trans_t[:n_check]
+                pose_aa_t[:n_check],
+                th_trans=trans_t[:n_check],
             )
             height_fix = verts[:n_check, ..., -1].min(dim=-1).values.min()
             trans_t[..., -1] -= height_fix
@@ -384,7 +390,8 @@ def main():
 
     key_to_path = discover_motions(args.kit_dir, keys_for_discover)
     logger.info(
-        f"Found {len(key_to_path)}/{len(keys_for_discover)} matching .npz files"
+        f"Found {len(key_to_path)}/{len(keys_for_discover)} "
+        f"matching .npz files",
     )
 
     ordered_keys = [k for k in combined if k in key_to_path]
@@ -400,7 +407,7 @@ def main():
     if args.finalize_only:
         if not ckpt_path.exists():
             raise SystemExit(
-                f"--finalize-only: нет файла чекпоинта {ckpt_path}"
+                f"--finalize-only: нет файла чекпоинта {ckpt_path}",
             )
         checkpoint = joblib.load(ckpt_path)
         logger.info(
@@ -411,7 +418,7 @@ def main():
     elif ckpt_path.exists():
         checkpoint = joblib.load(ckpt_path)
         logger.info(
-            f"Resumed checkpoint: {len(checkpoint)} motions already done"
+            f"Resumed checkpoint: {len(checkpoint)} motions already done",
         )
         remaining = [
             (mid, key)
@@ -453,7 +460,9 @@ def main():
             }
 
             for future in tqdm(
-                as_completed(futures), total=len(futures), desc="IK"
+                as_completed(futures),
+                total=len(futures),
+                desc="IK",
             ):
                 mid = futures[future]
                 key = motion_id_map[mid]
@@ -463,7 +472,7 @@ def main():
                     since_save += 1
                 else:
                     logger.warning(
-                        f"Motion {mid} ({key}) returned None (skipped)"
+                        f"Motion {mid} ({key}) returned None (skipped)",
                     )
 
                 if since_save >= CHECKPOINT_EVERY:

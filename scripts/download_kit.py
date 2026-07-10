@@ -16,7 +16,7 @@ REPO_ID = "N1ksw1r/KIT"
 ########################################
 def main():
     parser = argparse.ArgumentParser(
-        description="Скачать KIT датасет с Hugging Face в data/KIT"
+        description="Скачать KIT датасет с Hugging Face в data/KIT",
     )
     parser.add_argument(
         "--data-dir",

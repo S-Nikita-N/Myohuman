@@ -110,7 +110,7 @@ class ForwardKinematics:
             offsets.append(reordered_joint_offsets[n])
 
         self._offsets = torch.from_numpy(
-            np.round(np.stack(offsets, axis=1), decimals=5)
+            np.round(np.stack(offsets, axis=1), decimals=5),
         )
 
         self.dt = dt
@@ -149,7 +149,9 @@ class ForwardKinematics:
         pose_mat_ordered = pose_mat[:, :, self.smpl_2_mujoco]
 
         wbody_pos, wbody_mat = self.forward_kinematics_batch(
-            pose_mat_ordered[:, :, 1:], pose_mat_ordered[:, :, 0:1], trans
+            pose_mat_ordered[:, :, 1:],
+            pose_mat_ordered[:, :, 0:1],
+            trans,
         )
 
         return_dict = EasyDict()
@@ -162,20 +164,25 @@ class ForwardKinematics:
             self.dt,
         )
         rigidbody_angular_velocity = self._compute_angular_velocity(
-            wbody_rot, self.dt
+            wbody_rot,
+            self.dt,
         )
         return_dict.global_rotation = wbody_rot
         return_dict.local_rotation = pose_quat
         return_dict.global_root_velocity = rigidbody_linear_velocity[..., 0, :]
         return_dict.global_root_angular_velocity = rigidbody_angular_velocity[
-            ..., 0, :
+            ...,
+            0,
+            :,
         ]
 
         return_dict.global_angular_velocity = rigidbody_angular_velocity
         return_dict.global_velocity = rigidbody_linear_velocity
 
         dof_pos = tRot.matrix_to_euler_angles(pose_mat_ordered, "XYZ")[
-            ..., 1:, :
+            ...,
+            1:,
+            :,
         ]
 
         return_dict.dof_pos = torch.cat(
@@ -218,7 +225,10 @@ class ForwardKinematics:
         return return_dict
 
     def forward_kinematics_batch(
-        self, rotations, root_rotations, root_positions
+        self,
+        rotations,
+        root_rotations,
+        root_positions,
     ):
         """
         Perform forward kinematics using the given trajectory and
@@ -277,14 +287,16 @@ class ForwardKinematics:
 
         if guassian_filter:
             velocity = torch.from_numpy(
-                ndimage.gaussian_filter1d(velocity, 2, axis=-3, mode="nearest")
+                ndimage.gaussian_filter1d(velocity, 2, axis=-3, mode="nearest"),
             ).to(p)
 
         return velocity
 
     @staticmethod
     def _compute_angular_velocity(
-        rotations, time_delta: float, guassian_filter=True
+        rotations,
+        time_delta: float,
+        guassian_filter=True,
     ):
         # assume the second last dimension is the time axis
 
@@ -301,7 +313,10 @@ class ForwardKinematics:
         if guassian_filter:
             angular_velocity = torch.from_numpy(
                 ndimage.gaussian_filter1d(
-                    angular_velocity.numpy(), 2, axis=-3, mode="nearest"
+                    angular_velocity.numpy(),
+                    2,
+                    axis=-3,
+                    mode="nearest",
                 ),
             )
         return angular_velocity

@@ -48,17 +48,23 @@ def test_golden(key, fn):
 def test_quat_to_angle_axis_golden():
     angle, axis = npt.quat_to_angle_axis(GOLDEN["q"])
     np.testing.assert_allclose(
-        angle, GOLDEN["quat_to_angle_axis_angle"], rtol=1e-10
+        angle,
+        GOLDEN["quat_to_angle_axis_angle"],
+        rtol=1e-10,
     )
     np.testing.assert_allclose(
-        axis, GOLDEN["quat_to_angle_axis_axis"], rtol=1e-10
+        axis,
+        GOLDEN["quat_to_angle_axis_axis"],
+        rtol=1e-10,
     )
 
 
 def test_normalize_angle_golden():
     x = H.rng(606).uniform(-10, 10, size=12)
     np.testing.assert_allclose(
-        npt.normalize_angle(x), GOLDEN["normalize_angle"], rtol=1e-10
+        npt.normalize_angle(x),
+        GOLDEN["normalize_angle"],
+        rtol=1e-10,
     )
 
 
@@ -102,7 +108,9 @@ def test_heading_inv_cancels_heading():
     identity[:, 0] = 1.0
     # up to sign
     assert np.allclose(prod, identity, atol=1e-8) or np.allclose(
-        prod, -identity, atol=1e-8
+        prod,
+        -identity,
+        atol=1e-8,
     )
 
 
@@ -141,8 +149,12 @@ def test_quat_to_tan_norm_shape_and_unit():
     tn = npt.quat_to_tan_norm(q)
     assert tn.shape == (7, 6)
     np.testing.assert_allclose(
-        np.linalg.norm(tn[:, :3], axis=-1), 1.0, atol=1e-8
+        np.linalg.norm(tn[:, :3], axis=-1),
+        1.0,
+        atol=1e-8,
     )
     np.testing.assert_allclose(
-        np.linalg.norm(tn[:, 3:], axis=-1), 1.0, atol=1e-8
+        np.linalg.norm(tn[:, 3:], axis=-1),
+        1.0,
+        atol=1e-8,
     )

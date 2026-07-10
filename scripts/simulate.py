@@ -6,7 +6,7 @@ from pathlib import Path
 SIMULATE = False
 
 parser = argparse.ArgumentParser(
-    description="Launch MuJoCo passive viewer for the hand model."
+    description="Launch MuJoCo passive viewer for the hand model.",
 )
 parser.add_argument(
     "--simulate",
@@ -19,7 +19,7 @@ parser.add_argument(
     "--xml-path",
     type=str,
     default=str(
-        Path(__file__).resolve().parent.parent / "xml" / "myohuman.xml"
+        Path(__file__).resolve().parent.parent / "xml" / "myohuman.xml",
     ),
     help="Path to the XML model; default is resolved relative to this script.",
 )

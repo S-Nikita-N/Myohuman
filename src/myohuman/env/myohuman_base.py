@@ -184,7 +184,9 @@ class BaseEnv(gym.Env):
     def create_viewer(self):
         if not self.headless and self.render_mode == "human":
             self.viewer = mujoco.viewer.launch_passive(
-                self.mj_model, self.mj_data, key_callback=self.key_callback
+                self.mj_model,
+                self.mj_data,
+                key_callback=self.key_callback,
             )
 
         if not self.headless and self.render_mode == "rgb_array":

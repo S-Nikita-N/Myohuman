@@ -39,13 +39,19 @@ def test_imitation_reward_uniform_golden():
         body_weights=None,
     )
     np.testing.assert_allclose(
-        reward, REWARD_GOLDEN["reward_uniform"], rtol=1e-10
+        reward,
+        REWARD_GOLDEN["reward_uniform"],
+        rtol=1e-10,
     )
     np.testing.assert_allclose(
-        raw["r_body_pos"], REWARD_GOLDEN["r_body_pos_uniform"], rtol=1e-10
+        raw["r_body_pos"],
+        REWARD_GOLDEN["r_body_pos_uniform"],
+        rtol=1e-10,
     )
     np.testing.assert_allclose(
-        raw["r_vel"], REWARD_GOLDEN["r_vel_uniform"], rtol=1e-10
+        raw["r_vel"],
+        REWARD_GOLDEN["r_vel_uniform"],
+        rtol=1e-10,
     )
 
 
@@ -60,10 +66,14 @@ def test_imitation_reward_weighted_golden():
         body_weights=REWARD_GOLDEN["body_weights"],
     )
     np.testing.assert_allclose(
-        reward, REWARD_GOLDEN["reward_weighted"], rtol=1e-10
+        reward,
+        REWARD_GOLDEN["reward_weighted"],
+        rtol=1e-10,
     )
     np.testing.assert_allclose(
-        raw["r_body_pos"], REWARD_GOLDEN["r_body_pos_weighted"], rtol=1e-10
+        raw["r_body_pos"],
+        REWARD_GOLDEN["r_body_pos_weighted"],
+        rtol=1e-10,
     )
 
 
@@ -80,7 +90,9 @@ def test_imitation_reward_perfect_match_is_max():
     np.testing.assert_allclose(raw["r_body_pos"], 1.0, atol=1e-12)
     np.testing.assert_allclose(raw["r_vel"], 1.0, atol=1e-12)
     np.testing.assert_allclose(
-        reward, H.REWARD_SPECS["w_pos"] + H.REWARD_SPECS["w_vel"], atol=1e-12
+        reward,
+        H.REWARD_SPECS["w_pos"] + H.REWARD_SPECS["w_vel"],
+        atol=1e-12,
     )
 
 
@@ -109,11 +121,20 @@ def test_imitation_reward_matches_closed_form():
 def test_imitation_reward_uniform_weights_equals_none():
     body_pos, body_vel, ref_pos, ref_vel = H.imitation_reward_inputs()
     r_none, _ = compute_imitation_reward(
-        body_pos, body_vel, ref_pos, ref_vel, H.REWARD_SPECS
+        body_pos,
+        body_vel,
+        ref_pos,
+        ref_vel,
+        H.REWARD_SPECS,
     )
     w = np.full(H.NUM_TRACKED_BODIES, 1.0 / H.NUM_TRACKED_BODIES)
     r_w, _ = compute_imitation_reward(
-        body_pos, body_vel, ref_pos, ref_vel, H.REWARD_SPECS, body_weights=w
+        body_pos,
+        body_vel,
+        ref_pos,
+        ref_vel,
+        H.REWARD_SPECS,
+        body_weights=w,
     )
     np.testing.assert_allclose(r_none, r_w, rtol=1e-10)
 
@@ -132,7 +153,10 @@ def test_imitation_observations_golden():
         "diff_muscle_vel",
     ):
         np.testing.assert_allclose(
-            obs[key], OBS_GOLDEN[key], rtol=1e-10, atol=1e-12
+            obs[key],
+            OBS_GOLDEN[key],
+            rtol=1e-10,
+            atol=1e-12,
         )
 
 
@@ -173,10 +197,14 @@ def test_imitation_observations_muscle_diff_sign():
     obs = compute_imitation_observations(*inp, time_steps=1)
     # diff = ref - current
     np.testing.assert_allclose(
-        obs["diff_muscle_len"], inp[8] - inp[6], rtol=1e-12
+        obs["diff_muscle_len"],
+        inp[8] - inp[6],
+        rtol=1e-12,
     )
     np.testing.assert_allclose(
-        obs["diff_muscle_vel"], inp[9] - inp[7], rtol=1e-12
+        obs["diff_muscle_vel"],
+        inp[9] - inp[7],
+        rtol=1e-12,
     )
 
 
@@ -248,7 +276,10 @@ def test_self_observations_golden():
         "local_body_ang_vel",
     ):
         np.testing.assert_allclose(
-            obs[key], SELF_GOLDEN[key], rtol=1e-10, atol=1e-12
+            obs[key],
+            SELF_GOLDEN[key],
+            rtol=1e-10,
+            atol=1e-12,
         )
 
 
@@ -267,7 +298,9 @@ def test_self_observations_root_height_is_root_z():
     body_pos, body_rot, body_vel, body_ang_vel = H.self_obs_inputs()
     obs = compute_self_observations(body_pos, body_rot, body_vel, body_ang_vel)
     np.testing.assert_allclose(
-        obs["root_h_obs"][0, 0], body_pos[0, 0, 2], rtol=1e-12
+        obs["root_h_obs"][0, 0],
+        body_pos[0, 0, 2],
+        rtol=1e-12,
     )
 
 

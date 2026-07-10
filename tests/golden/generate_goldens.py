@@ -39,7 +39,8 @@ OUT = H.GOLDEN_DIR
 
 def save(name, **arrays):
     np.savez(
-        OUT / f"{name}.npz", **{k: np.asarray(v) for k, v in arrays.items()}
+        OUT / f"{name}.npz",
+        **{k: np.asarray(v) for k, v in arrays.items()},
     )
     print(f"wrote {name}.npz  ({', '.join(arrays)})")
 
@@ -70,7 +71,7 @@ def gen_np_transform():
         quat_to_angle_axis_axis=npt.quat_to_angle_axis(q)[1],
         quat_to_exp_map=npt.quat_to_exp_map(q),
         normalize_angle=npt.normalize_angle(
-            H.rng(606).uniform(-10, 10, size=12)
+            H.rng(606).uniform(-10, 10, size=12),
         ),
     )
 
@@ -142,7 +143,10 @@ def gen_reset():
         far_max=compute_humanoid_im_reset(body, ref_far, 0.15, False),
         far_mean=compute_humanoid_im_reset(body, ref_far, 0.15, True),
         far_max_perbody=compute_humanoid_im_reset(
-            body, ref_far, per_body, False
+            body,
+            ref_far,
+            per_body,
+            False,
         ),
     )
 

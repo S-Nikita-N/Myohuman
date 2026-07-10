@@ -15,7 +15,9 @@ class MyoHumanTask(MyoHumanEnv):
         super().__init__(cfg)
 
     def reset(
-        self, seed: int | None = None, options: dict | None = None
+        self,
+        seed: int | None = None,
+        options: dict | None = None,
     ) -> tuple[dict, dict]:
         # First reset humanoid, then reset task, then reset the simulation.
         "Resets at MyoHumanTask level"
