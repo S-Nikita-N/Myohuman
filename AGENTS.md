@@ -16,21 +16,18 @@ Repo-specific commands (how to run things) live in the README.
 | config                   | Hydra structured configs                   |
 | commit gate              | pre-commit                                 |
 
-## Quick commands (`just`)
+## Quick commands
 
-A `justfile` provides shortcuts — run `just` to list them:
-
-| Recipe          | Runs                                |
+| Task            | Command                             |
 | --------------- | ----------------------------------- |
-| `just install`  | `uv sync`                           |
-| `just hooks`    | `uv run pre-commit install`         |
-| `just lint`     | `uv run pre-commit run --all-files` |
-| `just test`     | `uv run pytest`                     |
-| `just cov`      | `uv run pytest --cov`               |
-| `just ik`       | `uv run python scripts/compute_ik.py` |
+| sync env        | `uv sync`                           |
+| install hook    | `uv run pre-commit install`         |
+| lint gate       | `uv run pre-commit run --all-files` |
+| tests           | `uv run pytest`                     |
+| coverage        | `uv run pytest --cov`               |
+| compute IK      | `uv run python scripts/compute_ik.py` |
 
-It is a thin convenience layer that **calls** these entrypoints — the
-`pre-commit` gate stays the single source of truth, so `just` is never required.
+The `pre-commit` gate stays the single source of truth for lint/format/types.
 
 ## Code style
 
@@ -78,7 +75,7 @@ characterization tests over the math, env and reward logic. Run on every commit
 and in CI. Regenerate goldens only on an intentional behavior change
 (`uv run python tests/golden/generate_goldens.py`).
 
-Run: `pytest` (or `just test`).
+Run: `pytest`.
 
 ## CI
 
