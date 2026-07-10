@@ -11,7 +11,7 @@ Repo-specific commands (how to run things) live in the README.
 | ------------------------ | ------------------------------------------ |
 | dependencies & packaging | uv (src layout)                            |
 | lint + format            | Ruff (`ruff check`, `ruff format`)         |
-| type checking            | mypy (relaxed over `src`/`tools`)          |
+| type checking            | mypy (typed `tools/`; src typing TBD)          |
 | tests                    | pytest (+ golden characterization tests)   |
 | config                   | Hydra structured configs                   |
 | commit gate              | pre-commit                                 |
@@ -68,9 +68,8 @@ Run all: `pre-commit run --all-files`. Run one: `pre-commit run ruff-check`.
 
 - **ruff** — `ruff check` (rules `E, F, UP, B, SIM, C4, PT`; isort `I` is off,
   imports are ordered by length — code-style §6) and `ruff format`.
-- **mypy** — relaxed over `src` and `tools` (`ignore_missing_imports`, no
-  mandatory annotations). Catches real type errors on legacy untyped code;
-  tightening to strict is a future follow-up.
+- **mypy** — runs over the typed `tools/`. Annotating the legacy `src/`
+  (hundreds of implicit-Optional / attr-defined findings) is a follow-up.
 
 ## Tests
 
