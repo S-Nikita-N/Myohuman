@@ -22,7 +22,7 @@ random_sample: False
 motion_ids_file: null  # path to JSON from mine_negatives.py — loads only these motion IDs
 
 # Policy Observations
-proprioceptive_inputs: 
+proprioceptive_inputs:
   - root_height
   - root_tilt
   - local_body_pos
@@ -34,7 +34,7 @@ proprioceptive_inputs:
   # - muscle_force
   - feet_contacts
 
-task_inputs: 
+task_inputs:
   - diff_local_body_pos
   - diff_local_vel
   - local_ref_body_pos

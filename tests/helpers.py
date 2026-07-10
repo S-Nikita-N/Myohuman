@@ -1,8 +1,9 @@
 """Deterministic input builders shared by tests and the golden generator.
 
 These inputs are frozen: changing them invalidates the golden files in
-tests/golden/. Regenerate goldens with `uv run python tests/golden/generate_goldens.py`
-only when a behavior change is intentional.
+tests/golden/. Regenerate goldens with
+`uv run python tests/golden/generate_goldens.py` only when a behavior
+change is intentional.
 """
 
 import numpy as np
@@ -29,6 +30,11 @@ REWARD_SPECS = {
 NUM_TRACKED_BODIES = 14  # len(MYOHUMAN_TRACKED_BODIES)
 
 
+########################################
+#            Input builders            #
+########################################
+
+
 def rng(seed=12345):
     return np.random.default_rng(seed)
 
@@ -46,7 +52,8 @@ def random_vectors(n, seed=54321):
 
 
 def imitation_reward_inputs():
-    """Inputs for compute_imitation_reward: (1, J, 3) arrays with small ref offset."""
+    """Inputs for compute_imitation_reward: (1, J, 3) arrays with small
+    ref offset."""
     g = rng(777)
     body_pos = g.normal(size=(1, NUM_TRACKED_BODIES, 3))
     body_vel = g.normal(size=(1, NUM_TRACKED_BODIES, 3))

@@ -1,4 +1,5 @@
-"""Regression tests for pytorch3d_transforms utilities used by forward_kinematics.
+"""Regression tests for pytorch3d_transforms utilities used by
+forward_kinematics.
 
 Focus: quat_angle_axis must not mutate its input tensor (previously it
 normalized a view of the input in place).
@@ -7,6 +8,11 @@ normalized a view of the input in place).
 import torch
 
 import myohuman.utils.pytorch3d_transforms as tRot
+
+
+########################################
+#           Regression tests           #
+########################################
 
 
 def _unit_quats(n, seed=0):
@@ -24,7 +30,8 @@ def test_quat_angle_axis_does_not_mutate_input():
     # returned axis is unit length
     assert torch.allclose(axis.norm(dim=-1), torch.ones(6), atol=1e-5)
     # angle in [0, pi]
-    assert (angle >= 0).all() and (angle <= torch.pi + 1e-5).all()
+    assert (angle >= 0).all()
+    assert (angle <= torch.pi + 1e-5).all()
 
 
 def test_quat_angle_axis_matches_manual():

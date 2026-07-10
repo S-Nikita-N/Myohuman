@@ -34,7 +34,7 @@ proprioceptive_inputs:
   # - muscle_force
   - feet_contacts
 
-task_inputs: 
+task_inputs:
   - diff_local_body_pos
   - diff_local_vel
   - local_ref_body_pos

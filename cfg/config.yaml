@@ -12,7 +12,7 @@ seed: 0
 no_log: False
 resume_str: null
 num_threads: 1
-test: False 
+test: False
 project_root: ${hydra:runtime.cwd}
 output_dir: ${project_root}/models/${exp_name}
 epoch: 0

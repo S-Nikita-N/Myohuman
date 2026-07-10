@@ -1,6 +1,13 @@
-from abc import abstractmethod
 import numpy as np
+
+from abc import abstractmethod
+
 from myohuman.env.myohuman_env import MyoHumanEnv
+
+
+########################################
+#            MyoHuman task             #
+########################################
 
 
 class MyoHumanTask(MyoHumanEnv):
@@ -50,7 +57,8 @@ class MyoHumanTask(MyoHumanEnv):
 
     def compute_observations(self) -> np.ndarray:
         """
-        Calls functions to compute proprioception and task observations and concatenates the returned arrays.
+        Calls functions to compute proprioception and task observations and
+        concatenates the returned arrays.
         """
         prop_obs = self.compute_proprioception()
         task_obs = self.compute_task_obs()
@@ -58,7 +66,8 @@ class MyoHumanTask(MyoHumanEnv):
 
     def create_viewer(self) -> None:
         """
-        Adds the task visualization (e.g. motion imitation spheres) to the viewer.
+        Adds the task visualization (e.g. motion imitation spheres) to the
+        viewer.
         """
         super().create_viewer()
         self.create_task_visualization()

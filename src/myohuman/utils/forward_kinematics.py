@@ -1,7 +1,7 @@
-import torch
-import numpy as np
 import os
 import sys
+import torch
+import numpy as np
 import scipy.ndimage as ndimage
 
 from easydict import EasyDict
@@ -11,6 +11,11 @@ import myohuman.utils.pytorch3d_transforms as tRot
 from myohuman.smpl.smpl_parser import SMPL_Parser, SMPL_BONE_ORDER_NAMES
 
 sys.path.append(os.getcwd())
+
+
+########################################
+#          Forward kinematics          #
+########################################
 
 
 class ForwardKinematics:
@@ -96,7 +101,7 @@ class ForwardKinematics:
             _,
         ) = self.smpl_parser.get_mesh_offsets_batch(betas=betas[:, :10])
 
-        reordered_joint_offsets = dict()
+        reordered_joint_offsets = {}
         for n in SMPL_BONE_ORDER_NAMES:
             reordered_joint_offsets[n] = joint_offsets[n]
 
@@ -116,10 +121,12 @@ class ForwardKinematics:
         trans: torch.Tensor,
     ):
         """
-        Performs batched forward kinematics (FK) for SMPL pose and translation inputs, producing Mujoco-compatible outputs.
+        Performs batched forward kinematics (FK) for SMPL pose and
+        translation inputs, producing Mujoco-compatible outputs.
 
         Args:
-            pose (torch.Tensor): Input poses in axis-angle format of shape `(B, T, J, 3)`, where:
+            pose (torch.Tensor): Input poses in axis-angle format of
+                shape `(B, T, J, 3)`, where:
                 - `B`: Batch size.
                 - `T`: Sequence length.
                 - `J`: Number of joints.
@@ -214,10 +221,13 @@ class ForwardKinematics:
         self, rotations, root_rotations, root_positions
     ):
         """
-        Perform forward kinematics using the given trajectory and local rotations.
+        Perform forward kinematics using the given trajectory and
+        local rotations.
         Arguments (where B = batch size, J = number of joints):
-            -- rotations: (B, J, 4) tensor of unit quaternions describing the local rotations of each joint.
-            -- root_positions: (B, 3) tensor describing the root joint positions.
+            -- rotations: (B, J, 4) tensor of unit quaternions
+               describing the local rotations of each joint.
+            -- root_positions: (B, 3) tensor describing the root
+               joint positions.
         Output: joint positions (B, J, 3)
         """
 

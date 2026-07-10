@@ -3,16 +3,27 @@ import sys
 import mujoco
 import numpy as np
 import gymnasium as gym
-import myohuman.utils.np_transform_utils as npt_utils
 
 from collections import OrderedDict
 from scipy.spatial.transform import Rotation as sRot
+
+import myohuman.utils.np_transform_utils as npt_utils
+
 from myohuman.env.myohuman_base import BaseEnv
 
 sys.path.append(os.getcwd())
 
 
+########################################
+#         MyoHuman environment         #
+########################################
+
+
 class MyoHumanEnv(BaseEnv):
+    ########################################
+    #                Setup                 #
+    ########################################
+
     def __init__(self, cfg):
         self.cfg = cfg
         super().__init__(cfg=self.cfg)
@@ -87,9 +98,14 @@ class MyoHumanEnv(BaseEnv):
         geom_type_id = mujoco.mju_str2Type("geom")
         self.floor_idx = mujoco.mj_name2id(self.mj_model, geom_type_id, "floor")
 
+    ########################################
+    #             Observations             #
+    ########################################
+
     def get_obs_size(self) -> int:
         """
-        Returns the size of the observations. In the environment class, this defaults to the size of the proprioceptive observations.
+        Returns the size of the observations. In the environment class, this
+        defaults to the size of the proprioceptive observations.
         """
         return self.get_self_obs_size()
 
@@ -101,7 +117,8 @@ class MyoHumanEnv(BaseEnv):
 
     def compute_observations(self) -> np.ndarray:
         """
-        Computes the observations. In the environment class, this defaults to the proprioceptive observations.
+        Computes the observations. In the environment class, this defaults to
+        the proprioceptive observations.
         """
         obs = self.compute_proprioception()
         return obs
@@ -142,14 +159,15 @@ class MyoHumanEnv(BaseEnv):
         """
         Computes proprioceptive observations for the current simulation state.
 
-        Updates the humanoid's body and actuator states, and generates observations
-        based on the configured inputs.
+        Updates the humanoid's body and actuator states, and generates
+        observations based on the configured inputs.
 
         Returns:
             np.ndarray: Flattened array of proprioceptive observations.
 
         Notes:
-            - The observations are also stored in the `self.proprioception` attribute.
+            - The observations are also stored in the `self.proprioception`
+              attribute.
         """
         mujoco.mj_kinematics(
             self.mj_model, self.mj_data
@@ -218,6 +236,10 @@ class MyoHumanEnv(BaseEnv):
         return np.concatenate(
             [v.ravel() for v in myohuman_obs.values()], axis=0, dtype=self.dtype
         )
+
+    ########################################
+    #           State accessors            #
+    ########################################
 
     def get_body_xpos(self, data=None):
         """
@@ -314,9 +336,14 @@ class MyoHumanEnv(BaseEnv):
         """
         return self.get_body_xpos(data)[0].copy()
 
+    ########################################
+    #          Reward & stepping           #
+    ########################################
+
     def compute_reward(self, action):
         """
-        Placeholder for reward computation. In the environment class, this defaults to 0.
+        Placeholder for reward computation. In the environment class, this
+        defaults to 0.
         """
         reward = 0
         return reward
@@ -330,9 +357,11 @@ class MyoHumanEnv(BaseEnv):
 
     def compute_reset(self) -> tuple[bool, bool]:
         """
-        Determines whether the episode should reset based on termination and truncation conditions.
+        Determines whether the episode should reset based on termination and
+        truncation conditions.
 
-        In the environment class, the episode ends if the current time step exceeds the maximum episode length.
+        In the environment class, the episode ends if the current time step
+        exceeds the maximum episode length.
         """
         if self.cur_t > self.max_episode_length:
             return False, True
@@ -343,11 +372,12 @@ class MyoHumanEnv(BaseEnv):
         """
         Executes a physics step in the simulation with the given action.
 
-        Depending on the control mode, computes muscle activations and applies them
-        to the simulation. Tracks power usage during the step.
+        Depending on the control mode, computes muscle activations and applies
+        them to the simulation. Tracks power usage during the step.
 
         Args:
-            action (np.ndarray): The action to apply. If None, a random action is sampled.
+            action (np.ndarray): The action to apply. If None, a random action
+                is sampled.
         """
         self.curr_power_usage = []
 
@@ -357,7 +387,7 @@ class MyoHumanEnv(BaseEnv):
         if self.control_mode == "PD":
             target_lengths = action_to_target_length(action, self.mj_model)
 
-        for i in range(self.control_freq_inv):
+        for i in range(self.control_freq_inv):  # noqa: B007
             if not self.paused:
                 if self.control_mode == "PD":
                     muscle_activity = target_length_to_activation(
@@ -382,9 +412,9 @@ class MyoHumanEnv(BaseEnv):
         """
         Processes the environment state after each physics step.
 
-        Increments the simulation time, computes observations, reward, and checks
-        for termination or truncation conditions. Collects and returns additional
-        information about the reward components.
+        Increments the simulation time, computes observations, reward, and
+        checks for termination or truncation conditions. Collects and returns
+        additional information about the reward components.
 
         Args:
             action (np.ndarray): The action applied at the current step.
@@ -393,9 +423,12 @@ class MyoHumanEnv(BaseEnv):
             Tuple:
                 - obs (np.ndarray): Current observations.
                 - reward (float): Reward for the current step.
-                - terminated (bool): Whether the task has terminated prematurely.
-                - truncated (bool): Whether the task has exceeded its allowed time.
-                - info (dict): Additional information, including raw reward components.
+                - terminated (bool): Whether the task has terminated
+                  prematurely.
+                - truncated (bool): Whether the task has exceeded its allowed
+                  time.
+                - info (dict): Additional information, including raw reward
+                  components.
         """
         if not self.paused:
             self.cur_t += 1
@@ -411,8 +444,8 @@ class MyoHumanEnv(BaseEnv):
 
     def init_myohuman(self):
         """
-        Initializes the MyoHuman environment. In the environment class, this defaults to
-        setting the agent to a default position.
+        Initializes the MyoHuman environment. In the environment class, this
+        defaults to setting the agent to a default position.
         """
         self.mj_data.qpos[:] = 0
         self.mj_data.qvel[:] = 0
@@ -430,6 +463,11 @@ class MyoHumanEnv(BaseEnv):
         return super().reset(seed=seed, options=options)
 
 
+########################################
+#      Control & observation math      #
+########################################
+
+
 def compute_self_observations(
     body_pos: np.ndarray,
     body_rot: np.ndarray,
@@ -441,7 +479,8 @@ def compute_self_observations(
 
     Args:
         body_pos (np.ndarray): Global positions of the bodies.
-        body_rot (np.ndarray): Global rotations of the bodies in quaternion format.
+        body_rot (np.ndarray): Global rotations of the bodies in quaternion
+            format.
         body_vel (np.ndarray): Linear velocities of the bodies.
         body_ang_vel (np.ndarray): Angular velocities of the bodies.
 
@@ -449,7 +488,8 @@ def compute_self_observations(
         OrderedDict: Dictionary containing:
             - `root_h_obs`: Root height observation.
             - `local_body_pos`: Local body positions excluding root.
-            - `local_body_rot_obs`: Local body rotations in tangent-normalized format.
+            - `local_body_rot_obs`: Local body rotations in tangent-normalized
+              format.
             - `local_body_vel`: Local body velocities.
             - `local_body_ang_vel`: Local body angular velocities.
     """
@@ -524,7 +564,8 @@ def compute_self_observations(
 
 def force_to_activation(forces, model, data):
     """
-    Converts actuator forces to activation levels for each actuator in the Mujoco model.
+    Converts actuator forces to activation levels for each actuator in the
+    Mujoco model.
 
     Args:
         forces (np.ndarray): Array of forces applied to the actuators.
@@ -587,7 +628,8 @@ def target_length_to_activation(lengths: np.ndarray, data, model) -> np.ndarray:
         model: Mujoco model containing actuator properties.
 
     Returns:
-        np.ndarray: Activation levels for each actuator, clipped between 0 and 1.
+        np.ndarray: Activation levels for each actuator, clipped between 0
+        and 1.
     """
     forces = target_length_to_force(lengths, data, model)
     activations = force_to_activation(forces, model, data)

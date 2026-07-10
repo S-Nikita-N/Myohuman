@@ -5,16 +5,18 @@ early-termination condition — the behavioral core of training. They take plain
 numpy arrays, so no mujoco model or env instance is needed.
 """
 
-import numpy as np
 import pytest
+import numpy as np
 
 import helpers as H
+
 from myohuman.env.myohuman_env import compute_self_observations
+
 from myohuman.env.myohuman_im import (
-    compute_imitation_observations,
+    MyoHumanIm,
     compute_imitation_reward,
     compute_humanoid_im_reset,
-    MyoHumanIm,
+    compute_imitation_observations,
 )
 
 REWARD_GOLDEN = np.load(H.GOLDEN_DIR / "imitation_reward.npz")
@@ -23,7 +25,9 @@ RESET_GOLDEN = np.load(H.GOLDEN_DIR / "im_reset.npz")
 SELF_GOLDEN = np.load(H.GOLDEN_DIR / "self_obs.npz")
 
 
-# ───────────────────────────── reward ──────────────────────────────
+########################################
+#                reward                #
+########################################
 def test_imitation_reward_uniform_golden():
     body_pos, body_vel, ref_pos, ref_vel = H.imitation_reward_inputs()
     reward, raw = compute_imitation_reward(
@@ -114,7 +118,9 @@ def test_imitation_reward_uniform_weights_equals_none():
     np.testing.assert_allclose(r_none, r_w, rtol=1e-10)
 
 
-# ─────────────────────────── observations ──────────────────────────
+########################################
+#             observations             #
+########################################
 def test_imitation_observations_golden():
     inp = H.imitation_obs_inputs()
     obs = compute_imitation_observations(*inp, time_steps=1)
@@ -174,7 +180,9 @@ def test_imitation_observations_muscle_diff_sign():
     )
 
 
-# ─────────────────────────── reset / termination ───────────────────
+########################################
+#         reset / termination          #
+########################################
 def test_im_reset_golden():
     body, close, far = (
         RESET_GOLDEN["body"],
@@ -226,7 +234,9 @@ def test_im_reset_boundary_is_strict_gt():
     assert compute_humanoid_im_reset(body, ref, 0.15, False)[0]
 
 
-# ───────────────────────── self observations ───────────────────────
+########################################
+#          self observations           #
+########################################
 def test_self_observations_golden():
     body_pos, body_rot, body_vel, body_ang_vel = H.self_obs_inputs()
     obs = compute_self_observations(body_pos, body_rot, body_vel, body_ang_vel)
@@ -261,7 +271,9 @@ def test_self_observations_root_height_is_root_z():
     )
 
 
-# ─────────────────────── energy reward (pure) ──────────────────────
+########################################
+#         energy reward (pure)         #
+########################################
 def test_energy_reward_l1_plus_l2():
     fn = MyoHumanIm.compute_energy_reward
     action = np.array([3.0, 4.0])

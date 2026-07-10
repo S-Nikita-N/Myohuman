@@ -1,8 +1,20 @@
 # Local quality gate: runs before every commit (`pre-commit install`).
 # Mirrors the CI checks so problems surface on your machine, not in CI.
 #
-# Vendored math (poselib/, utils/transformation.py, utils/pytorch3d_transforms.py)
-# is third-party and excluded from the opinionated style checks.
+# Vendored math (poselib/, utils/transformation.py, utils/pytorch3d_transforms.py,
+# smpl/smpl_parser.py) is third-party and excluded from the style checks.
+
+# Never touch vendored code, model XML, or data blobs with ANY hook (hygiene
+# included) — these are third-party / binary / not ours to reformat.
+exclude: |
+  (?x)^(
+    src/myohuman/poselib/
+    | src/myohuman/smpl/smpl_parser\.py
+    | src/myohuman/utils/(transformation|pytorch3d_transforms)\.py
+    | xml/
+    | data/
+  )
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -51,14 +63,14 @@ repos:
         entry: uv run python tools/pre_commit/check_imports.py
         language: system
         types: [python]
-        exclude: ^src/myohuman/poselib/|^src/myohuman/utils/(transformation|pytorch3d_transforms)\.py$
+        exclude: ^src/myohuman/poselib/|^src/myohuman/smpl/smpl_parser\.py$|^src/myohuman/utils/(transformation|pytorch3d_transforms)\.py$
 
       - id: check-banners
         name: Banners — Tier-1 width/indent/presence + Tier-2 intro spacing (code-style §1-§2)
         entry: uv run python tools/pre_commit/check_banners.py
         language: system
         types: [python]
-        exclude: ^src/myohuman/poselib/|^src/myohuman/utils/(transformation|pytorch3d_transforms)\.py$
+        exclude: ^src/myohuman/poselib/|^src/myohuman/smpl/smpl_parser\.py$|^src/myohuman/utils/(transformation|pytorch3d_transforms)\.py$
 
       # Keep the library/training code device-agnostic (CPU / CUDA / MPS):
       # no hard-coded cuda in src/ (append `# device-ok` for exceptions).

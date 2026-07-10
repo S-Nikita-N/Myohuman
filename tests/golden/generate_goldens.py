@@ -10,22 +10,31 @@ of the .npz files before committing.
 """
 
 import sys
-from pathlib import Path
+import pathlib
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # tests/ on path
+# tests/ on path
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import helpers as H  # noqa: E402
+
 import myohuman.utils.np_transform_utils as npt  # noqa: E402
+
 from myohuman.env.myohuman_env import compute_self_observations  # noqa: E402
+
 from myohuman.env.myohuman_im import (  # noqa: E402
-    compute_imitation_observations,
     compute_imitation_reward,
     compute_humanoid_im_reset,
+    compute_imitation_observations,
 )
 
 OUT = H.GOLDEN_DIR
+
+
+########################################
+#          Golden generators           #
+########################################
 
 
 def save(name, **arrays):

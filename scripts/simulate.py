@@ -1,6 +1,7 @@
-import argparse
-from pathlib import Path
 import mujoco
+import argparse
+
+from pathlib import Path
 
 SIMULATE = False
 

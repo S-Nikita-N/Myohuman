@@ -5,19 +5,23 @@ numeric behavior is pinned against golden snapshots. Property tests add
 mathematical invariants that any correct implementation must satisfy.
 """
 
-import numpy as np
 import pytest
-from scipy.spatial.transform import Rotation as sRot
+import numpy as np
 
 import helpers as H
+
+from scipy.spatial.transform import Rotation as sRot
+
 import myohuman.utils.np_transform_utils as npt
 
 GOLDEN = np.load(H.GOLDEN_DIR / "np_transform.npz")
 
 
-# ─────────────────────────── golden snapshots ───────────────────────────
+########################################
+#           golden snapshots           #
+########################################
 @pytest.mark.parametrize(
-    "key,fn",
+    ("key", "fn"),
     [
         ("quat_rotate", lambda: npt.quat_rotate(GOLDEN["q"], GOLDEN["v"])),
         ("quat_mul", lambda: npt.quat_mul(GOLDEN["q"], GOLDEN["q2"])),
@@ -58,7 +62,9 @@ def test_normalize_angle_golden():
     )
 
 
-# ─────────────────────────── property checks ────────────────────────────
+########################################
+#           property checks            #
+########################################
 def test_quat_mul_matches_scipy():
     # project uses wxyz; scipy uses xyzw
     q1 = H.random_unit_quats_wxyz(6, seed=11)
@@ -126,7 +132,7 @@ def test_calc_heading_is_yaw_only():
 
 def test_remove_base_rot_unknown_type_raises():
     q = H.random_unit_quats_wxyz(3, seed=1)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="unsupported humanoid_type"):
         npt.remove_base_rot(q, humanoid_type="mujoco")
 
 

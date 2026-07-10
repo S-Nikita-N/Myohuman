@@ -1,5 +1,10 @@
-import numpy as np
 import mujoco
+import numpy as np
+
+
+########################################
+#            Visual capsule            #
+########################################
 
 
 def add_visual_capsule(scene, point1, point2, radius, rgba):

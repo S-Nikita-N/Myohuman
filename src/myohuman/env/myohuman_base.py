@@ -1,13 +1,23 @@
-import numpy as np
-
-import gymnasium as gym
-import mujoco
 import time
+import mujoco
+import numpy as np
+import gymnasium as gym
+
+
+########################################
+#           Base environment           #
+########################################
 
 
 class BaseEnv(gym.Env):
+    ########################################
+    #                Setup                 #
+    ########################################
+
     def __init__(self, cfg):
-        self.clip_actions = False  # "flag, used in setting the action space and when building pd actions scales"
+        # "flag, used in setting the action space and when building pd
+        # actions scales"
+        self.clip_actions = False
         self.render_mode = "human"  # "human or rgb array"
 
         self.headless = cfg.run.headless  # "render a screen or not"
@@ -31,13 +41,20 @@ class BaseEnv(gym.Env):
         self.disable_reset = False
         self.follow = False
 
+    ########################################
+    #               Gym API                #
+    ########################################
+
     def reset(self, seed: int | None = None, options=None):
         """
         Resets the environment to its initial state.
 
         Args:
-            seed (int, optional): The random seed for the environment. Defaults to None.
-            options (dict, optional): Additional options for resetting the environment; they are plugged into gym.Env.reset(). Defaults to None.
+            seed (int, optional): The random seed for the environment.
+                Defaults to None.
+            options (dict, optional): Additional options for resetting the
+                environment; they are plugged into gym.Env.reset(). Defaults
+                to None.
 
         Returns:
             tuple: A tuple containing the observation and info after the reset.
@@ -64,14 +81,20 @@ class BaseEnv(gym.Env):
         Takes a step in the environment.
 
         Args:
-            action: The action to take in the environment. Must be compatible with the action space.
+            action: The action to take in the environment. Must be
+                compatible with the action space.
 
         Returns:
-            observation: The current observation of the environment - cf compute_observations().
-            reward: Scalar - the reward obtained from the environment. It is a weighted sum of several reward components.
-            terminated: A boolean indicating whether the episode is terminated, i.e. a fail state has been reached.
-            truncated: A boolean indicating whether the episode is truncated, i.e. the maximum number of steps has been reached.
-            info: Additional information about the step - cf post_physics_step().
+            observation: The current observation of the environment - cf
+                compute_observations().
+            reward: Scalar - the reward obtained from the environment. It is
+                a weighted sum of several reward components.
+            terminated: A boolean indicating whether the episode is
+                terminated, i.e. a fail state has been reached.
+            truncated: A boolean indicating whether the episode is truncated,
+                i.e. the maximum number of steps has been reached.
+            info: Additional information about the step - cf
+                post_physics_step().
         """
 
         # step physics and render each frame
@@ -94,14 +117,20 @@ class BaseEnv(gym.Env):
     def post_physics_step(self, action):
         raise NotImplementedError
 
+    ########################################
+    #              Rendering               #
+    ########################################
+
     def render(self):
         """
         Renders the environment.
 
-        If the environment is not set to headless mode, it creates a viewer and updates the rendering based on the render mode.
+        If the environment is not set to headless mode, it creates a viewer
+        and updates the rendering based on the render mode.
 
         Returns:
-            If render mode is "rgb_array", returns the rendered pixels as an array.
+            If render mode is "rgb_array", returns the rendered pixels as an
+            array.
         """
         if not self.headless:
             if self.viewer is None and self.renderer is None:
@@ -131,7 +160,8 @@ class BaseEnv(gym.Env):
         Set the random seed for the environment.
 
         Args:
-            seed (Optional[int]): The random seed to set. If None, a random seed will be used.
+            seed (Optional[int]): The random seed to set. If None, a random
+                seed will be used.
         """
         super().reset(seed=seed)
 

@@ -13,7 +13,8 @@ Output format:
     }
 
 Usage:
-    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 uv run python scripts/compute_ik.py --split train --workers 190
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+      uv run python scripts/compute_ik.py --split train --workers 190
     # train + test в одном прогоне → два файла (ik_train.pkl, ik_test.pkl):
     ... --split both --workers 64
 """
@@ -22,17 +23,17 @@ import os
 import sys
 import glob
 import torch
+import mujoco
 import joblib
 import logging
 import argparse
-import mujoco
-import scipy.optimize
 import numpy as np
+import scipy.optimize
 
-from pathlib import Path
 from tqdm import tqdm
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from pathlib import Path
 from scipy.spatial.transform import Rotation as sRot
+from concurrent.futures import as_completed, ProcessPoolExecutor
 
 from myohuman.utils.forward_kinematics import ForwardKinematics
 
@@ -96,9 +97,9 @@ MYOHUMAN_TRACKED_BODIES = [
 ]
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# CLI
-# ──────────────────────────────────────────────────────────────────────────────
+################################################
+#                     CLI                      #
+################################################
 def parse_args():
     p = argparse.ArgumentParser(
         description="Compute IK reference data for all frames"
@@ -113,7 +114,10 @@ def parse_args():
         "--output",
         type=str,
         default=None,
-        help="Output .pkl (train default path; при --split both задаёт только train-файл, test — по умолчанию)",
+        help=(
+            "Output .pkl (train default path; при --split both задаёт "
+            "только train-файл, test — по умолчанию)"
+        ),
     )
     p.add_argument("--kit-dir", type=str, default=DEFAULT_KIT_DIR)
     p.add_argument("--smpl-dir", type=str, default=DEFAULT_SMPL_DIR)
@@ -124,7 +128,10 @@ def parse_args():
         "--workers",
         type=int,
         default=None,
-        help="Number of parallel workers (default: 1 on macOS, cpu_count elsewhere)",
+        help=(
+            "Number of parallel workers "
+            "(default: 1 on macOS, cpu_count elsewhere)"
+        ),
     )
     p.add_argument(
         "--checkpoint-dir", type=str, default=str(BASE_DIR / "data" / "tmp")
@@ -133,17 +140,19 @@ def parse_args():
         "--finalize-only",
         action="store_true",
         help=(
-            "Только загрузить чекпоинт и записать выходные .pkl; IK не считать. "
-            "Имеет смысл после полного прогона, если упало на joblib.dump (например, нет места на диске). "
+            "Только загрузить чекпоинт и записать выходные .pkl; "
+            "IK не считать. "
+            "Имеет смысл после полного прогона, если упало на "
+            "joblib.dump (например, нет места на диске). "
             "Сейчас поддерживается только при --split both (ik_both_ckpt.pkl)."
         ),
     )
     return p.parse_args()
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Helpers
-# ──────────────────────────────────────────────────────────────────────────────
+################################################
+#                   Helpers                    #
+################################################
 def load_keys(path: str) -> list:
     """Load motion key names from a text file (one key per line)."""
     with open(path) as f:
@@ -174,7 +183,8 @@ def load_npz_motion(data_path: str):
     pose_aa:    (N, 72)  axis-angle for 24 SMPL joints (original SMPL order)
     root_trans: (N, 3)   root translation
     """
-    entry_data = dict(np.load(open(data_path, "rb"), allow_pickle=True))
+    with open(data_path, "rb") as f:
+        entry_data = dict(np.load(f, allow_pickle=True))
     if "mocap_framerate" not in entry_data:
         return None
 
@@ -183,7 +193,8 @@ def load_npz_motion(data_path: str):
 
     root_trans = entry_data["trans"][::skip, :].astype(np.float32)
 
-    # First 66 values = 22 SMPL joints * 3 axis-angle;  pad 2 hand joints with zeros
+    # First 66 values = 22 SMPL joints * 3 axis-angle;
+    # pad 2 hand joints with zeros
     raw_poses = entry_data["poses"][::skip, :66].astype(np.float32)
     pose_aa = np.concatenate(
         [raw_poses, np.zeros((root_trans.shape[0], 6), dtype=np.float32)],
@@ -193,15 +204,16 @@ def load_npz_motion(data_path: str):
     return pose_aa, root_trans, TARGET_FPS
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Core pipeline: FK + IK for a single motion
-# ──────────────────────────────────────────────────────────────────────────────
+################################################
+#  Core pipeline: FK + IK for a single motion  #
+################################################
 def process_motion(
     motion_id: int, data_path: str, xml_path: str, smpl_dir: str
 ):
     """
     Full pipeline for one motion:
-        load .npz  →  SMPL FK  →  fix height  →  IK every frame  →  return result
+        load .npz  →  SMPL FK  →  fix height  →  IK every frame
+        →  return result
 
     Returns dict {"frames": {time: qpos}, "metadata": {...}}  or  None.
     """
@@ -271,19 +283,24 @@ def process_motion(
             mujoco.mj_kinematics(mj_model, mj_data)
             init_qpos = mj_data.qpos.copy()
 
-            # IK target: SMPL FK body positions at tracked joints (skip root/pelvis)
+            # IK target: SMPL FK body positions at tracked joints
+            # (skip root/pelvis)
             ref_pos = global_pos[fi][SMPL_TRACKED_IDS[1:]]  # (13, 3)
 
-            # --- optimisation closures (capture mj_data, mj_model, etc.) ---
+            # --- optimisation closures (capture mj_data, mj_model, etc.).
+            #     B023: consumed by fmin_slsqp this same iteration, before
+            #     init_qpos / ref_pos are reassigned, so the late binding is
+            #     safe (noqa on the reference lines below). ---
             def objective(q):
-                return np.linalg.norm(q - init_qpos[7:]) * 5
+                return np.linalg.norm(q - init_qpos[7:]) * 5  # noqa: B023
 
             def constraint(q):
                 mj_data.qpos[7:] = q
                 mujoco.mj_kinematics(mj_model, mj_data)
                 bp = mj_data.xpos[idx_start:idx_end]
                 return np.linalg.norm(
-                    bp[track_ids[1:]] - ref_pos, axis=-1
+                    bp[track_ids[1:]] - ref_pos,  # noqa: B023
+                    axis=-1,
                 ).sum()
 
             x0 = prev_qpos[7:] if prev_qpos is not None else init_qpos[7:]
@@ -316,11 +333,12 @@ def process_motion(
         return None
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Main
-# ──────────────────────────────────────────────────────────────────────────────
+################################################
+#                     Main                     #
+################################################
 def assemble_output(ordered_keys: list, checkpoint: dict) -> dict:
-    """Собрать {"frames": {mid: ...}, "metadata": {mid: ...}} в порядке ordered_keys."""
+    """Собрать {"frames": {mid: ...}, "metadata": {mid: ...}} в
+    порядке ordered_keys."""
     out = {"frames": {}, "metadata": {}}
     for mid, key in enumerate(ordered_keys):
         if key in checkpoint:
@@ -370,13 +388,14 @@ def main():
     )
 
     ordered_keys = [k for k in combined if k in key_to_path]
-    motion_id_map = {mid: key for mid, key in enumerate(ordered_keys)}
+    motion_id_map = dict(enumerate(ordered_keys))
 
     if args.split == "both":
         ordered_train_out = [k for k in train_keys if k in key_to_path]
         ordered_test_out = [k for k in test_keys if k in key_to_path]
 
-    # Load checkpoint (keyed by motion key name for stability across key-file changes)
+    # Load checkpoint (keyed by motion key name for stability across
+    # key-file changes)
     ckpt_path.parent.mkdir(parents=True, exist_ok=True)
     if args.finalize_only:
         if not ckpt_path.exists():

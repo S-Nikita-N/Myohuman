@@ -70,6 +70,7 @@ line-length = 80
 target-version = "py312"
 extend-exclude = [
     "src/myohuman/poselib",
+    "src/myohuman/smpl/smpl_parser.py",
     "src/myohuman/utils/transformation.py",
     "src/myohuman/utils/pytorch3d_transforms.py",
 ]
@@ -84,6 +85,7 @@ select = ["E", "F", "UP", "B", "SIM", "C4", "PT"]
 [tool.typos.files]
 extend-exclude = [
     "src/myohuman/poselib",
+    "src/myohuman/smpl/smpl_parser.py",
     "src/myohuman/utils/transformation.py",
     "src/myohuman/utils/pytorch3d_transforms.py",
 ]

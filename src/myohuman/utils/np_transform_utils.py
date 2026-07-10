@@ -1,6 +1,11 @@
 import numpy as np
 
 
+########################################
+#        Quaternion transforms         #
+########################################
+
+
 def wxyz_to_xyzw(quat):
     return quat[..., [1, 2, 3, 0]]
 
@@ -117,7 +122,7 @@ def normalize_angle(x):
 
 def quat_to_angle_axis(q):
     min_theta = 1e-5
-    qw, qx, qy, qz = 0, 1, 2, 3
+    qw = 0
 
     sin_theta = np.sqrt(1 - q[..., qw] * q[..., qw])
     angle = 2 * np.arccos(q[..., qw])

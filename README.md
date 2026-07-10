@@ -20,5 +20,3 @@ OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 uv run python scripts
 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 uv run python scripts/compute_ik.py --split test --workers 9
 ```
 5) Run the second part of `notebooks/dataset.ipynb` to finish processing.
-
-

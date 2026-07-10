@@ -7,35 +7,37 @@ deterministic reward/step snapshot. np.random is seeded and heading
 randomization disabled so runs are reproducible.
 """
 
-import numpy as np
 import joblib
 import mujoco
 import pytest
+import numpy as np
+
+import helpers as H
+
 from omegaconf import OmegaConf
 from scipy.spatial.transform import Rotation as sRot
 
-import helpers as H
 from myohuman.env.myohuman_im import MyoHumanIm
 
 DT = 5 / 150  # control_frequency_inv / sim_timestep_inv == 1/30
 
 
 def _make_cfg(pose_file, **overrides):
-    run = dict(
-        headless=True,
-        fast_forward=True,
-        control_mode="direct",
-        xml_path=str(H.XML_PATH),
-        initial_pose_file=str(pose_file),
-        motion_id=0,
-        im_eval=False,
-        test=True,
-        num_motions=1,
-        random_sample=False,
-        random_start=False,
-        recording_biomechanics=False,
-        motion_ids_file=None,
-        proprioceptive_inputs=[
+    run = {
+        "headless": True,
+        "fast_forward": True,
+        "control_mode": "direct",
+        "xml_path": str(H.XML_PATH),
+        "initial_pose_file": str(pose_file),
+        "motion_id": 0,
+        "im_eval": False,
+        "test": True,
+        "num_motions": 1,
+        "random_sample": False,
+        "random_start": False,
+        "recording_biomechanics": False,
+        "motion_ids_file": None,
+        "proprioceptive_inputs": [
             "root_height",
             "root_tilt",
             "local_body_pos",
@@ -44,35 +46,35 @@ def _make_cfg(pose_file, **overrides):
             "local_body_ang_vel",
             "feet_contacts",
         ],
-        task_inputs=[
+        "task_inputs": [
             "diff_local_body_pos",
             "diff_local_vel",
             "local_ref_body_pos",
         ],
-    )
+    }
     run.update(overrides)
-    env = dict(
-        sim_timestep_inv=150,
-        control_frequency_inv=5,
-        kp_scale=1.0,
-        kd_scale=1.0,
-        clip_actions=True,
-        resampling_interval=100,
-        termination_distance=0.15,
-        body_termination_distance=None,
-        body_reward_weights=None,
-        reward_specs=dict(
-            k_pos=200,
-            k_vel=5,
-            k_muscle_len=2000,
-            k_muscle_vel=20,
-            w_pos=0.7,
-            w_vel=0.3,
-            w_energy=0.002,
-            w_muscle_len=0,
-            w_muscle_vel=0,
-        ),
-    )
+    env = {
+        "sim_timestep_inv": 150,
+        "control_frequency_inv": 5,
+        "kp_scale": 1.0,
+        "kd_scale": 1.0,
+        "clip_actions": True,
+        "resampling_interval": 100,
+        "termination_distance": 0.15,
+        "body_termination_distance": None,
+        "body_reward_weights": None,
+        "reward_specs": {
+            "k_pos": 200,
+            "k_vel": 5,
+            "k_muscle_len": 2000,
+            "k_muscle_vel": 20,
+            "w_pos": 0.7,
+            "w_vel": 0.3,
+            "w_energy": 0.002,
+            "w_muscle_len": 0,
+            "w_muscle_vel": 0,
+        },
+    }
     return OmegaConf.create({"run": run, "env": env})
 
 
@@ -114,7 +116,9 @@ def env(pose_file):
     return e
 
 
-# ─────────────────────────── construction / sizes ──────────────────────────
+########################################
+#         construction / sizes         #
+########################################
 def test_reference_data_loaded(env):
     assert env._num_total_motions == 1
     np.testing.assert_array_equal(env._all_motion_ids, np.array([0]))
@@ -144,7 +148,9 @@ def test_action_size_is_model_nu(env):
     assert env.get_action_size() == env.mj_model.nu
 
 
-# ─────────────────────────── reset / initial state ─────────────────────────
+########################################
+#        reset / initial state         #
+########################################
 def test_reset_sets_reference_qpos(env, nq):
     env.reset(seed=0, options={"start_time": 0.0})
     qpos0 = H.standing_qpos(nq)
@@ -157,7 +163,9 @@ def test_reset_zeroes_velocity_at_start(env):
     np.testing.assert_allclose(env.mj_data.qvel, 0.0, atol=1e-12)
 
 
-# ─────────────────────────── heading math ──────────────────────────────────
+########################################
+#             heading math             #
+########################################
 def test_apply_heading_identity_when_disabled(env, nq):
     env._heading_rot = None
     q = H.standing_qpos(nq)
@@ -181,7 +189,9 @@ def test_apply_heading_rotates_root(env, nq):
     np.testing.assert_array_equal(out[7:], q[7:])
 
 
-# ─────────────────────────── motion bookkeeping ────────────────────────────
+########################################
+#          motion bookkeeping          #
+########################################
 def test_lookup_reference_qpos_exact_and_nearest(env, nq):
     q_exact = env._lookup_reference_qpos(0, 0.0)
     np.testing.assert_allclose(q_exact, H.standing_qpos(nq), atol=1e-12)
@@ -202,14 +212,17 @@ def test_get_motion_length_metadata_branch(env):
     assert env.get_motion_length(999) == 0.0
 
 
-# ─────────────────────────── deterministic step snapshot ───────────────────
+########################################
+#     deterministic step snapshot      #
+########################################
 def test_step_reward_is_finite_and_reproducible(env):
     env.reset(seed=0, options={"start_time": 0.0})
     action = H.fixed_action(env.get_action_size())
     obs, reward, terminated, truncated, info = env.step(action.copy())
     assert np.isfinite(reward)
     assert obs.shape[0] == env.get_obs_size()
-    assert "r_body_pos" in info and "energy_cost" in info
+    assert "r_body_pos" in info
+    assert "energy_cost" in info
 
     # replay from same seed/state → identical reward (determinism)
     np.random.seed(0)
@@ -222,7 +235,8 @@ def test_step_reward_is_finite_and_reproducible(env):
 
 
 def test_compute_energy_reward_available_on_base_env():
-    # compute_energy_reward now lives on MyoHumanEnv, so base physics_step works.
+    # compute_energy_reward now lives on MyoHumanEnv, so base
+    # physics_step works.
     from myohuman.env.myohuman_env import MyoHumanEnv
     from myohuman.env.myohuman_im import MyoHumanIm
 
@@ -258,7 +272,8 @@ def test_biomechanics_records_sampled_motion_id(pose_file):
     e.reset(seed=0, options={"start_time": 0.0})
     e._sampled_motion_id = 0
     e.step(H.fixed_action(e.get_action_size()))
-    # motion_id log holds the actually-playing motion, not the config motion_id const
+    # motion_id log holds the actually-playing motion, not the config
+    # motion_id const
     assert e.motion_id[-1] == e._sampled_motion_id
 
 

@@ -4,13 +4,16 @@
 """
 
 import argparse
-from pathlib import Path
 
+from pathlib import Path
 from huggingface_hub import snapshot_download
 
 REPO_ID = "N1ksw1r/KIT"
 
 
+########################################
+#             Download KIT             #
+########################################
 def main():
     parser = argparse.ArgumentParser(
         description="Скачать KIT датасет с Hugging Face в data/KIT"
