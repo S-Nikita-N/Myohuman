@@ -20,6 +20,11 @@ class MLP(nn.Module):
             self.activation = torch.nn.GELU()
         elif activation == 'silu':
             self.activation = torch.nn.SiLU()
+        else:
+            raise ValueError(
+                f"Unknown activation '{activation}'. "
+                f"Choose from: tanh, relu, sigmoid, gelu, silu."
+            )
 
         self.out_dim = hidden_dims[-1]
         self.affine_layers = nn.ModuleList()

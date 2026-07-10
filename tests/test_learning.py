@@ -35,6 +35,12 @@ def test_mlp_forward_shape(activation):
     assert out.shape == (4, 8)
 
 
+def test_mlp_unknown_activation_raises():
+    # unknown activation must fail loudly at construction, not silently at forward
+    with pytest.raises(ValueError):
+        MLP(10, (16, 8), "not_an_activation")
+
+
 def test_value_output_shape_and_head_init():
     torch.manual_seed(0)
     v = Value(10, (16, 8), "silu")
