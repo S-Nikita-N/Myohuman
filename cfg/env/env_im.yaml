@@ -1,5 +1,5 @@
 # Default experiment name
-task: MyoLegs Imitation
+task: MyoHuman Imitation
 
 # Simulation Configs
 sim_timestep_inv: 150
@@ -31,6 +31,6 @@ termination_distance: 0.15
 # Example: {humerus_r: 0.3, humerus_l: 0.3, radius_r: 0.3, radius_l: 0.3, lunate_r: 0.3, lunate_l: 0.3}
 body_termination_distance: null
 
-# Per-body reward weights for tracked bodies (same order as MYOLEG_TRACKED_BODIES).
+# Per-body reward weights for tracked bodies (same order as MYOHUMAN_TRACKED_BODIES).
 # null = equal weights (1.0 for all).
 body_reward_weights: null

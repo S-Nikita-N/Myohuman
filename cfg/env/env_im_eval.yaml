@@ -1,5 +1,5 @@
 # Default experiment name
-task: MyoLegs Imitation
+task: MyoHuman Imitation
 
 # Simulation Configs
 sim_timestep_inv: 150

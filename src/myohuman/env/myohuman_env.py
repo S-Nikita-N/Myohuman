@@ -8,12 +8,12 @@ import myohuman.utils.np_transform_utils as npt_utils
 from typing import Tuple
 from collections import OrderedDict
 from scipy.spatial.transform import Rotation as sRot
-from myohuman.env.myolegs_base_env import BaseEnv
+from myohuman.env.myohuman_base import BaseEnv
 
 sys.path.append(os.getcwd())
 
 
-class MyoLegsEnv(BaseEnv):
+class MyoHumanEnv(BaseEnv):
     def __init__(self, cfg):
         self.cfg = cfg
         super().__init__(cfg=self.cfg)
@@ -22,7 +22,7 @@ class MyoLegsEnv(BaseEnv):
         self.create_sim(
             cfg.run.xml_path
         )
-        self.setup_myolegs_params()
+        self.setup_myohuman_params()
         self.reward_info = {}
         
         self.observation_space = gym.spaces.Box(
@@ -47,7 +47,7 @@ class MyoLegsEnv(BaseEnv):
         self.max_episode_length = 300
         self.dtype = np.float32
 
-    def setup_myolegs_params(self) -> None:
+    def setup_myohuman_params(self) -> None:
         """
         Sets up various parameters related to the MyoLeg environment.
         """
@@ -159,33 +159,33 @@ class MyoLegsEnv(BaseEnv):
         root_rot = sRot.from_quat(self.mj_data.qpos[[4, 5, 6, 3]])
         root_rot_euler = root_rot.as_euler("xyz")
 
-        myolegs_obs = OrderedDict()
+        myohuman_obs = OrderedDict()
         
         inputs = self.cfg.run.proprioceptive_inputs
 
         if "root_height" in inputs:
-            myolegs_obs["root_height"] = obs_dict["root_h_obs"]  # 1
+            myohuman_obs["root_height"] = obs_dict["root_h_obs"]  # 1
         if "root_tilt" in inputs:
-            myolegs_obs["root_tilt"] = np.array([np.cos(root_rot_euler[0]), np.sin(root_rot_euler[0]), np.cos(root_rot_euler[1]), np.sin(root_rot_euler[1])])  # 4
+            myohuman_obs["root_tilt"] = np.array([np.cos(root_rot_euler[0]), np.sin(root_rot_euler[0]), np.cos(root_rot_euler[1]), np.sin(root_rot_euler[1])])  # 4
         if "local_body_pos" in inputs:
-            myolegs_obs["local_body_pos"] = obs_dict["local_body_pos"][0]  # 3 * num_bodies
+            myohuman_obs["local_body_pos"] = obs_dict["local_body_pos"][0]  # 3 * num_bodies
         if "local_body_rot" in inputs:
-            myolegs_obs["local_body_rot"] = obs_dict["local_body_rot_obs"][0]  # 6 * num_bodies
+            myohuman_obs["local_body_rot"] = obs_dict["local_body_rot_obs"][0]  # 6 * num_bodies
         if "local_body_vel" in inputs:
-            myolegs_obs["local_body_vel"] = obs_dict["local_body_vel"][0]  # 3 * num_bodies
+            myohuman_obs["local_body_vel"] = obs_dict["local_body_vel"][0]  # 3 * num_bodies
         if "local_body_ang_vel" in inputs:
-            myolegs_obs["local_body_ang_vel"] = obs_dict["local_body_ang_vel"][0]  # 3 * num_bodies
+            myohuman_obs["local_body_ang_vel"] = obs_dict["local_body_ang_vel"][0]  # 3 * num_bodies
         if "muscle_len" in inputs:
-            myolegs_obs["muscle_len"] = np.nan_to_num(self.mj_data.actuator_length.copy())  # num_actuators
+            myohuman_obs["muscle_len"] = np.nan_to_num(self.mj_data.actuator_length.copy())  # num_actuators
         if "muscle_vel" in inputs:
-            myolegs_obs["muscle_vel"] = np.nan_to_num(self.mj_data.actuator_velocity.copy())  # num_actuators
+            myohuman_obs["muscle_vel"] = np.nan_to_num(self.mj_data.actuator_velocity.copy())  # num_actuators
         if "muscle_force" in inputs:
-            myolegs_obs["muscle_force"] = np.nan_to_num(self.mj_data.actuator_force.copy())  # num_actuators
+            myohuman_obs["muscle_force"] = np.nan_to_num(self.mj_data.actuator_force.copy())  # num_actuators
         if "feet_contacts" in inputs:
-            myolegs_obs["feet_contacts"] = self.get_touch()  # 4
-        self.proprioception = myolegs_obs
+            myohuman_obs["feet_contacts"] = self.get_touch()  # 4
+        self.proprioception = myohuman_obs
 
-        return np.concatenate([v.ravel() for v in myolegs_obs.values()], axis=0, dtype=self.dtype)
+        return np.concatenate([v.ravel() for v in myohuman_obs.values()], axis=0, dtype=self.dtype)
     
     def get_body_xpos(self, data=None):
         """
@@ -353,9 +353,9 @@ class MyoLegsEnv(BaseEnv):
 
         return obs, reward, terminated, truncated, info
     
-    def init_myolegs(self):
+    def init_myohuman(self):
         """
-        Initializes the MyoLegs environment. In the environment class, this defaults to
+        Initializes the MyoHuman environment. In the environment class, this defaults to
         setting the agent to a default position.
         """
         self.mj_data.qpos[:] = 0
@@ -369,7 +369,7 @@ class MyoLegsEnv(BaseEnv):
         mujoco.mj_forward(self.mj_model, self.mj_data)
 
     def reset(self, seed=None, options=None):
-        self.init_myolegs()
+        self.init_myohuman()
         self.forward_sim()
         return super().reset(seed=seed, options=options)
 

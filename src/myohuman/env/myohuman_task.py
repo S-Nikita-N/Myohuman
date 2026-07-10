@@ -1,17 +1,17 @@
 from abc import abstractmethod
 from typing import Optional, Tuple
 import numpy as np
-from myohuman.env.myolegs_env import MyoLegsEnv
+from myohuman.env.myohuman_env import MyoHumanEnv
 
 
-class MyoLegsTask(MyoLegsEnv):
+class MyoHumanTask(MyoHumanEnv):
 
     def __init__(self, cfg):
         super().__init__(cfg)
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None) -> Tuple[dict, dict]:
         # First reset humanoid, then reset task, then reset the simulation.
-        "Resets at MyoLegsTask level"
+        "Resets at MyoHumanTask level"
         self.reset_task(options=options)
         return super().reset(seed=seed, options=options)
 

@@ -5,7 +5,7 @@ import logging
 
 from myohuman.agents.agent_humanoid import AgentHumanoid
 from myohuman.learning.learning_utils import to_test, to_cpu
-from myohuman.env.myolegs_im import MyoLegsIm
+from myohuman.env.myohuman_im import MyoHumanIm
 
 os.environ["OMP_NUM_THREADS"] = "1"
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class AgentIM(AgentHumanoid):
     """
     AgentIM is a specialized reinforcement learning agent for humanoid environments,
-    extending AgentHumanoid with specific functionalities for the MyoLegsIm environment.
+    extending AgentHumanoid with specific functionalities for the MyoHumanIm environment.
     """
 
     def __init__(
@@ -48,10 +48,10 @@ class AgentIM(AgentHumanoid):
 
     def setup_env(self):
         """
-        Initializes the MyoLegsIm environment based on the configuration.
+        Initializes the MyoHumanIm environment based on the configuration.
         """
-        self.env = MyoLegsIm(self.cfg)
-        logger.info("MyoLegsIm environment initialized.")
+        self.env = MyoHumanIm(self.cfg)
+        logger.info("MyoHumanIm environment initialized.")
 
     def eval_policy(self, epoch: int = 0, dump: bool = False, runs=None) -> float:
         """

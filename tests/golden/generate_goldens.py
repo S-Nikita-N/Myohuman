@@ -17,8 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # tests/ on path
 
 import helpers as H  # noqa: E402
 import myohuman.utils.np_transform_utils as npt  # noqa: E402
-from myohuman.env.myolegs_env import compute_self_observations  # noqa: E402
-from myohuman.env.myolegs_im import (  # noqa: E402
+from myohuman.env.myohuman_env import compute_self_observations  # noqa: E402
+from myohuman.env.myohuman_im import (  # noqa: E402
     compute_imitation_observations,
     compute_imitation_reward,
     compute_humanoid_im_reset,

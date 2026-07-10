@@ -74,7 +74,7 @@ SMPL_TRACKED_IDS = [
     17,  # L_Wrist
 ]
 
-MYOLEG_TRACKED_BODIES = [
+MYOHUMAN_TRACKED_BODIES = [
     "root",      # Таз
     "tibia_l",   # Левая голень
     "tibia_r",   # Правая голень
@@ -220,7 +220,7 @@ def process_motion(motion_id: int, data_path: str, xml_path: str, smpl_dir: str)
         mj_data = mujoco.MjData(mj_model)
 
         body_names = [mj_model.body(i).name for i in range(mj_model.nbody)][1:]
-        track_ids = [body_names.index(b) for b in MYOLEG_TRACKED_BODIES]
+        track_ids = [body_names.index(b) for b in MYOHUMAN_TRACKED_BODIES]
         idx_start = 1        # skip "world" body in xpos
         idx_end = mj_model.nbody
 

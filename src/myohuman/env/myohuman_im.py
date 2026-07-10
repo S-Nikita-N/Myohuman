@@ -14,7 +14,7 @@ from omegaconf import DictConfig
 from typing import Dict, Iterator, Optional, Tuple
 from scipy.spatial.transform import Rotation as sRot
 
-from myohuman.env.myolegs_task import MyoLegsTask
+from myohuman.env.myohuman_task import MyoHumanTask
 from myohuman.utils.visual_capsule import add_visual_capsule
 
 
@@ -24,7 +24,7 @@ sys.path.append(str(path_root))
 logger = logging.getLogger(__name__)
 
 
-MYOLEG_TRACKED_BODIES = [
+MYOHUMAN_TRACKED_BODIES = [
     "root",      # Таз
     "tibia_l",   # Левая голень
     "tibia_r",   # Правая голень
@@ -42,7 +42,7 @@ MYOLEG_TRACKED_BODIES = [
 ]
 
 
-class MyoLegsIm(MyoLegsTask):
+class MyoHumanIm(MyoHumanTask):
 
     def __init__(self, cfg):
         self.initial_pose = None
@@ -273,7 +273,7 @@ class MyoLegsIm(MyoLegsTask):
         if self.renderer is not None:
             draw_obj(self.renderer.scene)
 
-    def setup_myolegs_params(self) -> None:
+    def setup_myohuman_params(self) -> None:
         """
         Configures body tracking and reset properties for MyoLeg.
 
@@ -287,9 +287,9 @@ class MyoLegsIm(MyoLegsTask):
             - `self.tracked_bodies_id`: Indices of tracked bodies in `self.body_names`.
             - `self.reset_bodies_id`: Indices of reset bodies in `self.body_names`.
         """
-        super().setup_myolegs_params()
+        super().setup_myohuman_params()
         self.full_tracked_bodies = self.body_names
-        self.tracked_bodies = MYOLEG_TRACKED_BODIES
+        self.tracked_bodies = MYOHUMAN_TRACKED_BODIES
         self.reset_bodies = self.tracked_bodies
         
         self.tracked_bodies_id = [
@@ -369,15 +369,15 @@ class MyoLegsIm(MyoLegsTask):
             self._active_motion_ids = np.array([motion_id])
             yield int(motion_id)
 
-    def init_myolegs(self) -> None:
+    def init_myohuman(self) -> None:
         """
-        Initializes the MyoLegs environment state.
+        Initializes the MyoHuman environment state.
 
         This function sets up the initial state of the simulation, including position, velocity, 
         and kinematics, using motion library data and cached or precomputed initial poses. 
         It also initializes evaluation metrics and biomechanical recording if enabled.
         """
-        super().init_myolegs()
+        super().init_myohuman()
         # Initialize motion states and poses
         self.initialize_motion_state()
         # Initialize evaluation metrics
@@ -391,7 +391,7 @@ class MyoLegsIm(MyoLegsTask):
         Sets the simulation state (qpos / qvel) from pre-computed IK reference data,
         applying the current episode heading.
         """
-        super().init_myolegs()
+        super().init_myohuman()
 
         motion_id = self._sampled_motion_id
 

@@ -25,7 +25,7 @@ REWARD_SPECS = {
     "w_muscle_vel": 0,
 }
 
-NUM_TRACKED_BODIES = 14  # len(MYOLEG_TRACKED_BODIES)
+NUM_TRACKED_BODIES = 14  # len(MYOHUMAN_TRACKED_BODIES)
 
 
 def rng(seed=12345):
@@ -85,7 +85,7 @@ def self_obs_inputs(num_bodies=20):
 
 
 def standing_qpos(nq):
-    """Standing pose matching MyoLegsEnv.init_myolegs()."""
+    """Standing pose matching MyoHumanEnv.init_myohuman()."""
     qpos = np.zeros(nq)
     qpos[2] = 0.94
     qpos[3:7] = np.array([1.0, 0.0, 0.0, 0.0])

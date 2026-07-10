@@ -8,12 +8,12 @@ import numpy as np
 import pytest
 
 import helpers as H
-from myohuman.env.myolegs_env import compute_self_observations
-from myohuman.env.myolegs_im import (
+from myohuman.env.myohuman_env import compute_self_observations
+from myohuman.env.myohuman_im import (
     compute_imitation_observations,
     compute_imitation_reward,
     compute_humanoid_im_reset,
-    MyoLegsIm,
+    MyoHumanIm,
 )
 
 REWARD_GOLDEN = np.load(H.GOLDEN_DIR / "imitation_reward.npz")
@@ -167,7 +167,7 @@ def test_self_observations_root_height_is_root_z():
 
 # ─────────────────────── energy reward (pure) ──────────────────────
 def test_energy_reward_l1_plus_l2():
-    fn = MyoLegsIm.compute_energy_reward
+    fn = MyoHumanIm.compute_energy_reward
     action = np.array([3.0, 4.0])
     # bound method not needed — self is unused; call unbound with a dummy self
     val = fn(None, action)
@@ -175,4 +175,4 @@ def test_energy_reward_l1_plus_l2():
 
 
 def test_energy_reward_zero_action():
-    assert MyoLegsIm.compute_energy_reward(None, np.zeros(10)) == 0.0
+    assert MyoHumanIm.compute_energy_reward(None, np.zeros(10)) == 0.0

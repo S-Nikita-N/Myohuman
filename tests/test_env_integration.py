@@ -1,4 +1,4 @@
-"""Integration characterization tests for MyoLegsIm.
+"""Integration characterization tests for MyoHumanIm.
 
 Instantiates the real env headless against the real MuJoCo model, but with a
 tiny synthetic IK reference (a few frames) instead of the 500 MB dataset.
@@ -14,7 +14,7 @@ from omegaconf import OmegaConf
 from scipy.spatial.transform import Rotation as sRot
 
 import helpers as H
-from myohuman.env.myolegs_im import MyoLegsIm
+from myohuman.env.myohuman_im import MyoHumanIm
 
 DT = 5 / 150  # control_frequency_inv / sim_timestep_inv == 1/30
 
@@ -75,7 +75,7 @@ def pose_file(tmp_path_factory, nq):
 @pytest.fixture
 def env(pose_file):
     np.random.seed(0)
-    e = MyoLegsIm(_make_cfg(pose_file))
+    e = MyoHumanIm(_make_cfg(pose_file))
     e._randomize_heading = False
     e._heading_rot = None
     return e
@@ -180,7 +180,7 @@ def test_step_reward_is_finite_and_reproducible(env):
 
     # replay from same seed/state → identical reward (determinism)
     np.random.seed(0)
-    env2 = MyoLegsIm(_make_cfg(env.initial_pose_file))
+    env2 = MyoHumanIm(_make_cfg(env.initial_pose_file))
     env2._randomize_heading = False
     env2._heading_rot = None
     env2.reset(seed=0, options={"start_time": 0.0})
@@ -189,13 +189,13 @@ def test_step_reward_is_finite_and_reproducible(env):
 
 
 def test_compute_energy_reward_available_on_base_env():
-    # compute_energy_reward now lives on MyoLegsEnv, so base physics_step works.
-    from myohuman.env.myolegs_env import MyoLegsEnv
-    from myohuman.env.myolegs_im import MyoLegsIm
-    assert hasattr(MyoLegsEnv, "compute_energy_reward")
-    # MyoLegsIm inherits the same implementation (no override)
-    assert MyoLegsIm.compute_energy_reward is MyoLegsEnv.compute_energy_reward
-    assert MyoLegsEnv.compute_energy_reward(None, np.array([3.0, 4.0])) == pytest.approx(12.0)
+    # compute_energy_reward now lives on MyoHumanEnv, so base physics_step works.
+    from myohuman.env.myohuman_env import MyoHumanEnv
+    from myohuman.env.myohuman_im import MyoHumanIm
+    assert hasattr(MyoHumanEnv, "compute_energy_reward")
+    # MyoHumanIm inherits the same implementation (no override)
+    assert MyoHumanIm.compute_energy_reward is MyoHumanEnv.compute_energy_reward
+    assert MyoHumanEnv.compute_energy_reward(None, np.array([3.0, 4.0])) == pytest.approx(12.0)
 
 
 def test_start_end_eval_toggle_flags(env):
@@ -216,7 +216,7 @@ def test_start_end_eval_toggle_flags(env):
 
 def test_biomechanics_records_sampled_motion_id(pose_file):
     np.random.seed(0)
-    e = MyoLegsIm(_make_cfg(pose_file, recording_biomechanics=True))
+    e = MyoHumanIm(_make_cfg(pose_file, recording_biomechanics=True))
     e._randomize_heading = False
     e._heading_rot = None
     e.reset(seed=0, options={"start_time": 0.0})
