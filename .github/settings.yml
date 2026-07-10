@@ -1,0 +1,43 @@
+# Repository settings as code, synced to GitHub by the Probot "Settings" app:
+# https://probot.github.io/apps/settings/  (source: repository-settings/app)
+#
+# This mirrors the repo's GitHub-side configuration so it travels with the
+# code. The app reads this file from the DEFAULT branch and applies it on push.
+#
+# NOTE: `repository.private` is intentionally omitted — the app only applies
+# fields present here, so visibility is left untouched (never flip a private
+# repo public by accident). Add it back deliberately if you want to manage it.
+#
+# NOT managed here (cannot / must not live in a file):
+#   - the CLAUDE_CODE_OAUTH_TOKEN secret — add it via `gh secret set` or the UI
+#   - the Claude GitHub App installation
+
+repository:
+  # Merge strategies + hygiene (Settings -> General -> Pull Requests).
+  allow_squash_merge: true
+  allow_merge_commit: true
+  allow_rebase_merge: true
+  allow_auto_merge: true
+  delete_branch_on_merge: true
+
+collaborators:
+  - username: nikswir-claude
+    permission: push
+
+branches:
+  - name: main
+    protection:
+      # Reviewer verdict is a hard gate: one approval, dismissed on new commits.
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: false
+      # Red CI blocks the merge. `test` is the job name in ci.yml — it must
+      # match the CI job name in any repo this file is copied to.
+      required_status_checks:
+        strict: false
+        contexts:
+          - test
+      # Admins can still override in a pinch; no push restrictions.
+      enforce_admins: false
+      restrictions: null
