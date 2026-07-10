@@ -1,9 +1,9 @@
-"""Characterization tests for the CPU learning modules.
+"""Characterization tests for the CPU learning modules used at inference.
 
-MLP / Value / RunningNorm / policies / optimizer helpers — no data files, no
-GPU. torch is seeded so weight init is reproducible. Only the well-defined
-default code paths are pinned here (e.g. RunningNorm with its default decay=1,
-where the update reduces to a standard running mean/variance).
+MLP / RunningNorm / policies — no data files, no GPU. torch is seeded so
+weight init is reproducible. Only the well-defined default code paths are
+pinned here (e.g. RunningNorm with its default decay=1, where the update
+reduces to a standard running mean/variance).
 """
 import numpy as np
 import pytest
@@ -11,11 +11,9 @@ import torch
 from omegaconf import OmegaConf
 
 from myohuman.learning.mlp import MLP
-from myohuman.learning.critic import Value
 from myohuman.learning.running_norm import RunningNorm
 from myohuman.learning.policy_gaussian import PolicyGaussian, DiagGaussian
 from myohuman.learning.policy_lattice import PolicyLattice
-from myohuman.learning import learning_utils as lu
 
 
 def _cfg(units=(32, 32), activation="silu", fix_std=True, log_std=-2.0):
@@ -25,7 +23,7 @@ def _cfg(units=(32, 32), activation="silu", fix_std=True, log_std=-2.0):
     )
 
 
-# ─────────────────────────────── MLP / Value ───────────────────────────────
+# ─────────────────────────────────── MLP ───────────────────────────────────
 @pytest.mark.parametrize("activation", ["tanh", "relu", "sigmoid", "gelu", "silu"])
 def test_mlp_forward_shape(activation):
     torch.manual_seed(0)
@@ -39,15 +37,6 @@ def test_mlp_unknown_activation_raises():
     # unknown activation must fail loudly at construction, not silently at forward
     with pytest.raises(ValueError):
         MLP(10, (16, 8), "not_an_activation")
-
-
-def test_value_output_shape_and_head_init():
-    torch.manual_seed(0)
-    v = Value(10, (16, 8), "silu")
-    out = v(torch.randn(5, 10))
-    assert out.shape == (5, 1)
-    # value head bias zeroed at init
-    assert torch.allclose(v.value_head.bias, torch.zeros(1))
 
 
 # ─────────────────────────────── RunningNorm ───────────────────────────────
@@ -172,27 +161,3 @@ def test_policy_lattice_log_prob_shape():
     action = torch.randn(3, 4)
     lp = pol.get_log_prob(x, action)
     assert lp.shape == (3, 1)
-
-
-# ─────────────────────────────── learning_utils ────────────────────────────
-def test_to_test_restores_training_mode():
-    net = MLP(4, (8,), "relu")
-    net.train()
-    assert net.training
-    with lu.to_test(net):
-        assert not net.training
-    assert net.training
-
-
-def test_get_optimizer_types():
-    net = MLP(4, (8,), "relu")
-    assert isinstance(lu.get_optimizer(net, 1e-3, 0.0, "adam"), torch.optim.Adam)
-    assert isinstance(lu.get_optimizer(net, 1e-3, 0.0, "sgd"), torch.optim.SGD)
-    with pytest.raises(ValueError):
-        lu.get_optimizer(net, 1e-3, 0.0, "nope")
-
-
-def test_batch_to_passes_none_through():
-    a, b = torch.randn(2), None
-    out = lu.batch_to("cpu", a, b)
-    assert torch.allclose(out[0], a) and out[1] is None
