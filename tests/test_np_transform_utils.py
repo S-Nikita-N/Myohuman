@@ -105,6 +105,12 @@ def test_calc_heading_is_yaw_only():
     np.testing.assert_allclose(npt.normalize_angle(heading), angles, atol=1e-8)
 
 
+def test_remove_base_rot_unknown_type_raises():
+    q = H.random_unit_quats_wxyz(3, seed=1)
+    with pytest.raises(ValueError):
+        npt.remove_base_rot(q, humanoid_type="mujoco")
+
+
 def test_quat_to_tan_norm_shape_and_unit():
     q = H.random_unit_quats_wxyz(7, seed=99)
     tn = npt.quat_to_tan_norm(q)

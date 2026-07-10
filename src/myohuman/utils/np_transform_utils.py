@@ -133,6 +133,11 @@ def angle_axis_to_exp_map(angle, axis):
 def remove_base_rot(quat, humanoid_type = "smpl"):
     if humanoid_type in ["smpl", "smplh", "smplx"]:
         base_rot = quat_conjugate(np.array([[0.5, 0.5, 0.5, 0.5]])) #SMPL
+    else:
+        raise ValueError(
+            f"remove_base_rot: unsupported humanoid_type '{humanoid_type}'. "
+            f"Supported: 'smpl', 'smplh', 'smplx'."
+        )
 
     shape = quat.shape[0]
     return quat_mul(quat, base_rot.repeat(shape, 1))
