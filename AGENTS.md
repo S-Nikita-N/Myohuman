@@ -68,14 +68,19 @@ Run all: `pre-commit run --all-files`. Run one: `pre-commit run ruff-check`.
 - **mypy** — runs over the typed `tools/`. Annotating the legacy `src/`
   (hundreds of implicit-Optional / attr-defined findings) is a follow-up.
 
-## Tests
+## Tests — two stages
 
-CPU-only, deterministic (seeded, tiny tensors), no downloads — golden
-characterization tests over the math, env and reward logic. Run on every commit
-and in CI. Regenerate goldens only on an intentional behavior change
+- **Stage 1 (default)** — CPU-only, deterministic (seeded, tiny tensors), no
+  downloads — golden characterization tests over the math, env and reward
+  logic. Runs on every commit and in CI.
+- **Stage 2** — heavy/accelerator tests marked `@pytest.mark.stage2` (e.g.
+  device-agnosticism of the torch transform math on GPU vs CPU). They run
+  **only** when a CUDA/MPS accelerator is present, or when forced with
+  `RUN_STAGE2=1`; otherwise skipped gracefully.
+
+Run stage 1: `pytest`. Run stage 2 (needs a GPU): `RUN_STAGE2=1 pytest`.
+Regenerate goldens only on an intentional behavior change
 (`uv run python tests/golden/generate_goldens.py`).
-
-Run: `pytest`.
 
 ## CI
 

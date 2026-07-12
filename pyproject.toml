@@ -63,6 +63,9 @@ packages = ["src/myohuman"]
 testpaths = ["tests"]
 addopts = "-q"
 pythonpath = ["tools/pre_commit"]
+markers = [
+    "stage2: heavy/accelerator test; runs only when a GPU/MPS device is present or RUN_STAGE2=1",
+]
 
 # Vendored third-party math is excluded from lint/format/style everywhere.
 [tool.ruff]
