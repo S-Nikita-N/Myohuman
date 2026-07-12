@@ -62,7 +62,7 @@ $$
 over **14 tracked body points** (root, head, and both arms' and legs' three
 points each). An episode **terminates** when any tracked point drifts more than
 $0.15\,\text{m}$ from the reference. Defaults:
-$w_{\text{pos}}=0.7,\ k_{\text{pos}}=200,\ w_{\text{vel}}=0.3,\ k_{\text{vel}}=5,\ w_e=0.015$.
+$w_{\text{pos}}=0.7,\ k_{\text{pos}}=200,\ w_{\text{vel}}=0.3,\ k_{\text{vel}}=5,\ w_e=0.002$.
 
 <table>
   <tr>
@@ -106,8 +106,8 @@ MyoHuman generalized coordinates $q \in \mathbb{R}^{87}$.
 | Split | Clips | Duration |
 | ----- | ----: | -------- |
 | Train | 2 258 | ~6.0 h |
-| Test | 564 | ~1.5 h |
-| **Total** | **2 822** | **~7.5 h @ 30 Hz** |
+| Test | 565 | ~1.5 h |
+| **Total** | **2 823** | **~7.5 h @ 30 Hz** |
 
 That is ≈2.7× the reference data used by prior locomotion-only work.
 
@@ -184,7 +184,7 @@ tools/            pre-commit style checks
 | Depends on | MuJoCo, MyoSuite, AMASS/SMPL | consumes MyoHuman as a submodule |
 
 MyoTrainer imports MyoHuman as a Git submodule and drives it through
-`MyoHuman­Wrapper`; training details (transformer architecture, LATTICE, the
+`MyoHumanWrapper`; training details (transformer architecture, LATTICE, the
 three-stage OBC → PPO pipeline) live there.
 
 ## Background
