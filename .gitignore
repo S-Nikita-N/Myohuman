@@ -32,3 +32,9 @@ data/trained_models/
 *.ckpt
 *.pt
 wandb/
+
+# Temp files
+tmp/
+
+# IDE
+.vscode/
