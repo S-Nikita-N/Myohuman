@@ -18,10 +18,13 @@ broader range of whole-body movement.
 > control it — the muscle transformer, the training pipeline — live in a
 > separate repository, **[MyoTrainer](https://github.com/nikswir/MyoTrainer)**.
 
-<!-- TODO: demo GIF of the trained policy imitating a reference clip -->
 <p align="center">
-  <em>Demo GIF — coming soon.</em>
+  <img src="docs/assets/myohuman.png" alt="MyoHuman full-body musculoskeletal model in MuJoCo" width="460">
 </p>
+
+<p align="center"><em>The MyoHuman model in MuJoCo — 338 muscles (red) over the
+full-body skeleton, with the 14 tracked points (blue = agent joints,
+red = reference targets). An animated demo is coming soon.</em></p>
 
 ## The model
 
@@ -60,6 +63,18 @@ over **14 tracked body points** (root, head, and both arms' and legs' three
 points each). An episode **terminates** when any tracked point drifts more than
 $0.15\,\text{m}$ from the reference. Defaults:
 $w_{\text{pos}}=0.7,\ k_{\text{pos}}=200,\ w_{\text{vel}}=0.3,\ k_{\text{vel}}=5,\ w_e=0.015$.
+
+<table>
+  <tr>
+    <td><img src="docs/assets/myo1.png" alt="MyoHuman imitating a reference pose" width="250"></td>
+    <td><img src="docs/assets/myo2.png" alt="MyoHuman imitating a walking pose" width="250"></td>
+    <td><img src="docs/assets/myo3.png" alt="MyoHuman imitating an arms-raised pose" width="250"></td>
+  </tr>
+</table>
+
+*MyoHuman tracking reference clips across poses — **blue** spheres are the
+agent's own tracked joints, **red** spheres the reference targets they must
+follow.*
 
 **Observation** $o_t \in \mathbb{R}^{807}$, all in the root-local frame (so it
 is invariant to global body pose):
